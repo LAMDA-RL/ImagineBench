@@ -38,17 +38,16 @@ We are actively preparing:
 Pseudo code for using the benchmark:
 
 ```python
-import gymnasium as gym
-import envs
+import rimaro
 
-env = gym.make('ball')
+env = rimaro.make('MetaWorld-v0')
 
-# Obtain the dataset. Optional task_level: ['rephrasing', 'easy', 'hard'].
-real_data, imaginary_rollout_rephrasing = env.get_dataset(task_level="rephrasing") 
+# Obtain the dataset. Optional task_level: ['rephrase', 'easy', 'hard'].
+real_data, imaginary_rollout_rephrasing = env.get_dataset(level="rephrase") 
 
 # Train policy with any offline RL algorithms
 policy = offline_rl(real_data, imaginary_rollout_rephrasing)
 
 # Evaluate the policy
-eval_result = eval_policy(policy, env, task_level="rephrasing")
+eval_result = eval_policy(policy, env, level="rephrase")
 ```

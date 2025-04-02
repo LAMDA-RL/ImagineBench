@@ -1,4 +1,4 @@
-# RIMRO: Benchmark for <u>R</u>einforcement Learning from <u>Im</u>aginary <u>Ro</u>llouts
+<h1>RIMRO: Benchmark for <u>R</u>einforcement Learning from <u>Im</u>aginary <u>Ro</u>llouts</h1>
 
 [![Project Status: Early Development](https://img.shields.io/badge/status-active-green)](https://github.com/LAMDA-RL/RIMRO)
 
@@ -10,7 +10,7 @@ A benchmark for evaluating reinforcement learning algorithms that train the poli
 
 
 ## 📢 News
-- **Mar 31, 2025**: Initial release of datasets for CLEVR-Robot and Meta-World and the environment with Gymnasium wrapper.
+- **Mar 31, 2025**: Initial release of datasets for CLEVR-Robot and Meta-World and the environments with Gymnasium wrapper.
 
 
 ## Dataset Status
@@ -21,28 +21,30 @@ We have released initial datasets for 2 environments: [CLEVR-Robot](https://gith
 More environments and tasks are under active development.
 
 ### Available Environments
-| Environment | Tasks                                  | LLM Sources |
-|-------------|----------------------------------------|-------------|
-| CLEVR-Robot | moving 5 balls to target configuration | llama2      |
-| Meta-World  | distinct robotic manipulation tasks    | llama2      |
+| Environment | training tasks                                       | novel tasks                                                                                   | LLM Sources |
+|-------------|------------------------------------------------------|-----------------------------------------------------------------------------------------------|-------------|
+| CLEVR-Robot | move A ball to one direction of B ball               | unseen tasks such as "gather all the balls together" and "arrange the balls in a line"        | llama2      |
+| Meta-World  | ten different tasks provided by Meta-world benchmark | manipulation under the assumption that the agent is facing a wall / combination of old skills | llama2      |
 ---
 
 We are actively preparing:
 
 - More environment domains
-- real+LLM-generated rollouts
+- Real+LLM-imaginary rollouts
 - Varying task difficulty levels
 
 ## Basic usage
 
-We provide a pseudo code for using the benchmark:
+Pseudo code for using the benchmark:
 
 ```python
-import gym
+import gymnasium as gym
 import envs
 
 env = gym.make('ball')
-real_data, imaginary_rollout_rephrasing = env.get_dataset()
+
+# Obtain the dataset. Optional task_level: ['rephrasing', 'easy', 'hard'].
+real_data, imaginary_rollout_rephrasing = env.get_dataset(task_level="rephrasing") 
 
 # Train policy with any offline RL algorithms
 policy = offline_rl(real_data, imaginary_rollout_rephrasing)

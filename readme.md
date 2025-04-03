@@ -1,6 +1,6 @@
 <h1>RIMRO: Benchmark for <u>R</u>einforcement Learning from <u>Im</u>aginary <u>Ro</u>llouts</h1>
 
-[![Project Status: Early Development](https://img.shields.io/badge/status-active-green)](https://github.com/LAMDA-RL/RIMRO)
+[![Project Status: Active](https://img.shields.io/badge/status-active-green)](https://github.com/LAMDA-RL/RIMRO)
 
 ## Overview
 
@@ -10,6 +10,7 @@ A benchmark for evaluating reinforcement learning algorithms that train the poli
 
 
 ## 📢 News
+- **Apr 3, 2025**: Add BabyAI and LIBERO environments to the benchmark.
 - **Mar 31, 2025**: Initial release of datasets for CLEVR-Robot and Meta-World and the environments with Gymnasium wrapper.
 
 
@@ -17,14 +18,17 @@ A benchmark for evaluating reinforcement learning algorithms that train the poli
 
 **Now Available!**  
 
-We have released initial datasets for 2 environments: [CLEVR-Robot](https://github.com/google-research/clevr_robot_env) and [Meta-world](https://github.com/Farama-Foundation/Metaworld), with both real+LLM-generated rollouts.
+We have released initial datasets for 4 environments: [CLEVR-Robot](https://github.com/google-research/clevr_robot_env), [Meta-World](https://github.com/Farama-Foundation/Metaworld), [BabyAI](https://github.com/mila-iqia/babyai) and [LIBERO](https://github.com/Lifelong-Robot-Learning/LIBERO) with both real+LLM-generated rollouts.
 More environments and tasks are under active development.
 
 ### Available Environments
-| Environment | training tasks                                       | novel tasks                                                                                   | LLM Sources |
-|-------------|------------------------------------------------------|-----------------------------------------------------------------------------------------------|-------------|
-| CLEVR-Robot | move A ball to one direction of B ball               | unseen tasks such as "gather all the balls together" and "arrange the balls in a line"        | llama2      |
-| Meta-World  | ten different tasks provided by Meta-world benchmark | manipulation under the assumption that the agent is facing a wall / combination of old skills | llama2      |
+| Environment | Training tasks                                                      | Novel tasks                                                                                        | LLM Sources |
+|-------------|---------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|-------------|
+| CLEVR-Robot | move A ball to one direction of B ball                              | unseen tasks such as "gather all the balls together" and "arrange the balls in a line"             | llama2      |
+| Meta-World  | ten different tasks provided by Meta-world benchmark                | manipulation under the assumption that the agent is facing a wall / combination of training skills | llama2      |
+| BabyAI      | 7x7 Grid world with task like "goto", "putnext" and "open the door" | novel combination and extension of the training skills                                             | llama2      |
+| LIBERO      | robotic manipulation involving pick and place                       | sequential pick and place / manipulation under the assumption of unsafe factors                    | llama2      |
+
 ---
 
 We are actively preparing:
@@ -38,9 +42,9 @@ We are actively preparing:
 Pseudo code for using the benchmark:
 
 ```python
-import rimaro
+import rimro
 
-env = rimaro.make('MetaWorld-v0')
+env = rimro.make('MetaWorld-v0')
 
 # Obtain the dataset. Optional task_level: ['rephrase', 'easy', 'hard'].
 real_data, imaginary_rollout_rephrasing = env.get_dataset(level="rephrase") 

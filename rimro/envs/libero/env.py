@@ -349,17 +349,16 @@ class VectorLibero(gym.Env):
             init_state[10+7+7+7:10+7+7+7+7] = self.pos_quat_transfer(obj2_state)
             env.close()
         elif env_name in place_env_name_list:
-            with np.load(os.path.join(os.path.dirname(__file__),"./libero_files/env_inits.npz"), allow_pickle=True) as data:
-                loaded_data_observations = data["observations"]
-                loaded_data_task_id = data['task_ids']
             if env_name in alphabet_soup_env_name_list:
-                indices = np.where(loaded_data_task_id[:, 0] == 3)
+                with np.load(os.path.join(os.path.dirname(__file__),"./libero_files/place_alphabet_soup_inits.npz"), allow_pickle=True) as data:
+                    loaded_data_observations = data["observations"]
             elif env_name in cream_cheese_env_name_list:
-                indices = np.where(loaded_data_task_id[:, 0] == 4)
+                with np.load(os.path.join(os.path.dirname(__file__),"./libero_files/place_cream_cheese_inits.npz"), allow_pickle=True) as data:
+                    loaded_data_observations = data["observations"]
             elif env_name in salad_dressing_env_name_list:
-                indices = np.where(loaded_data_task_id[:, 0] == 5)
-            place_start = indices[0][0]
-            state = loaded_data_observations[random.choice(range(place_start, place_start + 1000)), 0, :]
+                with np.load(os.path.join(os.path.dirname(__file__),"./libero_files/place_salad_dressing_inits.npz"), allow_pickle=True) as data:
+                    loaded_data_observations = data["observations"]
+            state = loaded_data_observations[random.choice(range(0, 1000))]
             init_state = np.zeros(71)
             init_state[1:8] = state[0:7]
             init_state[8:10] = state[14:16]
@@ -369,23 +368,16 @@ class VectorLibero(gym.Env):
             init_state[10+7+7:10+7+7+7] = self.pos_quat_transfer(obj3_state)
             init_state[10+7+7+7:10+7+7+7+7] = self.pos_quat_transfer(obj2_state)
         elif env_name in safe_env_name_list:
-            with np.load(os.path.join(os.path.dirname(__file__),"./libero_files/env_inits.npz"), allow_pickle=True) as data:
-                loaded_data_observations = data["observations"]
-                loaded_data_task_id = data['task_ids']
-                loaded_data_terminals = data['terminals']
             if env_name in alphabet_soup_env_name_list:
-                indices = np.where(loaded_data_task_id[:, 0] == 3)
+                with np.load(os.path.join(os.path.dirname(__file__),"./libero_files/place_alphabet_soup_inits.npz"), allow_pickle=True) as data:
+                    loaded_data_observations = data["observations"]
             elif env_name in cream_cheese_env_name_list:
-                indices = np.where(loaded_data_task_id[:, 0] == 4)
+                with np.load(os.path.join(os.path.dirname(__file__),"./libero_files/place_cream_cheese_inits.npz"), allow_pickle=True) as data:
+                    loaded_data_observations = data["observations"]
             elif env_name in salad_dressing_env_name_list:
-                indices = np.where(loaded_data_task_id[:, 0] == 5)
-            place_start = indices[0][0]
-            indices_terminal = np.where(loaded_data_terminals[:, :, 0] == 1)
-            i_indices, j_indices = indices_terminal
-            i_indices = i_indices[place_start:place_start+1000]
-            j_indices = j_indices[place_start:place_start+1000]
-            observations = loaded_data_observations[i_indices, j_indices, :]
-            state = observations[random.choice(range(0, 1000))]
+                with np.load(os.path.join(os.path.dirname(__file__),"./libero_files/place_salad_dressing_inits.npz"), allow_pickle=True) as data:
+                    loaded_data_observations = data["observations"]
+            state = loaded_data_observations[random.choice(range(0, 1000))]
             init_state = np.zeros(71)
             init_state[1:8] = state[0:7]
             init_state[8:10] = state[14:16]

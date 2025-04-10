@@ -4,12 +4,14 @@ import urllib.request
 from pathlib import Path
 import progressbar
 import urllib.request
-
+from gymnasium import spaces
 
 DATASET_PATH = Path(__file__).parent.joinpath('data')
 ENV_ID_LIST = [
     'Ball-v0',
     'MetaWorld-v0',
+    'BabyAI-v0',
+    'Libero-v0',
 ]
 LEVEL_LIST = [
     'real',
@@ -20,6 +22,8 @@ LEVEL_LIST = [
 
 
 class RIMAROEnv:
+    action_space: spaces.Box = None
+    
     def __init__(self, **kwargs):
         raise NotImplementedError
 
@@ -65,6 +69,16 @@ url2ds_name = {
     'https://box.nju.edu.cn/f/d2f9ec3ddf8c46c6a2e3/?dl=1': 'metaworld_imaginary_hard.h5',
     'https://box.nju.edu.cn/f/5515ee501db948eb84db/?dl=1': 'metaworld_imaginary_rephrase.h5',
     'https://box.nju.edu.cn/f/0fea8e468869468092e9/?dl=1': 'metaworld_real.h5',
+    # babyai
+    'https://box.nju.edu.cn/f/da1fc389e5d24c45a3a4/?dl=1': 'babyai_imaginary_easy.npy',
+    'https://box.nju.edu.cn/f/b8c6282e2ddf4819b972/?dl=1': 'babyai_imaginary_hard.npy',
+    'https://box.nju.edu.cn/f/e4d6695bcbe141bf927b/?dl=1': 'babyai_imaginary_rephrase.npy',
+    'https://box.nju.edu.cn/f/47ef43a660874409a420/?dl=1': 'babyai_real.npy',
+    # libero
+    'https://box.nju.edu.cn/f/c8a4efcff22c46098535/?dl=1': 'libero_imaginary_easy.npy',
+    'https://box.nju.edu.cn/f/39741deb735843ddbeec/?dl=1': 'libero_imaginary_hard.npy',
+    'https://box.nju.edu.cn/f/e1f3d5d9c7bb4fc78a2d/?dl=1': 'libero_imaginary_rephrase.npy',
+    'https://box.nju.edu.cn/f/93ef16b8e2d64f5ea935/?dl=1': 'libero_real.npy',
 }
 
 
@@ -129,5 +143,25 @@ def make(env_id: str, **kwargs) -> RIMAROEnv:
             'real_h5': 'https://box.nju.edu.cn/f/0fea8e468869468092e9/?dl=1',
         }
         env = MetaWorldEnv(**kwargs)
+    elif env_id == 'BabyAI-v0':
+        from envs.babyai import BabyAIEnv
+        kwargs['dataset_url_dict'] = {
+            'imaginary_easy': 'https://box.nju.edu.cn/f/da1fc389e5d24c45a3a4/?dl=1',
+            'imaginary_hard': 'https://box.nju.edu.cn/f/b8c6282e2ddf4819b972/?dl=1',
+            'imaginary_rephrase': 'https://box.nju.edu.cn/f/e4d6695bcbe141bf927b/?dl=1',
+            'real': 'https://box.nju.edu.cn/f/47ef43a660874409a420/?dl=1',
+        }
+        env = BabyAIEnv(**kwargs)
+    elif env_id == 'Libero-v0':
+        from envs.libero import LiberoEnv
+        kwargs['dataset_url_dict'] = {
+            'imaginary_easy': 'https://box.nju.edu.cn/f/c8a4efcff22c46098535/?dl=1',
+            'imaginary_hard': 'https://box.nju.edu.cn/f/39741deb735843ddbeec/?dl=1',
+            'imaginary_rephrase': 'https://box.nju.edu.cn/f/e1f3d5d9c7bb4fc78a2d/?dl=1',
+            'real': 'https://box.nju.edu.cn/f/93ef16b8e2d64f5ea935/?dl=1',
+        }
+        env = LiberoEnv(**kwargs)
+    else:
+        raise NotImplementedError
     
     return env

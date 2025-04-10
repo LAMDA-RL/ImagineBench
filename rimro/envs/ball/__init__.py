@@ -28,31 +28,33 @@ class BallEnv(RIMAROEnv, LlataEnv):
         self.ptr = None
 
         # 指令以及其余信息统一存为 npy, 数据集(obs, action, mask, reward)统一存为 h5
-        self.path_dict = None
-        self.init_dataset()
+        self.path_dict = {}
+        # self.init_dataset()
         
+        self.path_dict['real_npy'] = download_dataset_from_url(self.dataset_url_dict['real_npy'])
         real_data = np.load(self.path_dict['real_npy'], allow_pickle=True).item()
         self.real_data_info = {
             'instructions': real_data['instructions'],
             'goals': real_data['goals'],
         }
-        self.imaginary_data_info = {}
-        imaginary_rephrase_data = np.load(self.path_dict['imaginary_rephrase_npy'], allow_pickle=True).item()
-        self.imaginary_data_info['rephrase_level'] = {
-            'instructions': imaginary_rephrase_data['instructions'],
-            'goals': imaginary_rephrase_data['goals'],
-        }
-        imaginary_easy_data = np.load(self.path_dict['imaginary_easy_npy'], allow_pickle=True).item()
-        self.imaginary_data_info['easy_level'] = {
-            'instructions': imaginary_easy_data['instructions'],
-            'goals': imaginary_easy_data['goals'],
-        }
-        imaginary_hard_data = np.load(self.path_dict['imaginary_hard_npy'], allow_pickle=True).item()
-        self.imaginary_data_info['hard_level'] = {
-            'instructions': imaginary_hard_data['instructions'],
-            'goals': imaginary_hard_data['goals'],
-        }
-        super().__init__(
+        # self.imaginary_data_info = {}
+        # imaginary_rephrase_data = np.load(self.path_dict['imaginary_rephrase_npy'], allow_pickle=True).item()
+        # self.imaginary_data_info['rephrase_level'] = {
+        #     'instructions': imaginary_rephrase_data['instructions'],
+        #     'goals': imaginary_rephrase_data['goals'],
+        # }
+        # imaginary_easy_data = np.load(self.path_dict['imaginary_easy_npy'], allow_pickle=True).item()
+        # self.imaginary_data_info['easy_level'] = {
+        #     'instructions': imaginary_easy_data['instructions'],
+        #     'goals': imaginary_easy_data['goals'],
+        # }
+        # imaginary_hard_data = np.load(self.path_dict['imaginary_hard_npy'], allow_pickle=True).item()
+        # self.imaginary_data_info['hard_level'] = {
+        #     'instructions': imaginary_hard_data['instructions'],
+        #     'goals': imaginary_hard_data['goals'],
+        # }
+        LlataEnv.__init__(
+            self,
             maximum_episode_steps=self.max_episode_steps,
             action_type='perfect',
             obs_type='order_invariant',
@@ -65,7 +67,7 @@ class BallEnv(RIMAROEnv, LlataEnv):
     def reset(self, **kwargs):
         self.level = kwargs.get('level', 'real')
 
-        obs = super().reset(**kwargs)
+        obs = LlataEnv.reset(self, **kwargs)
         info = {}
 
         qpos = self.physics.data.qpos.copy()
@@ -82,7 +84,7 @@ class BallEnv(RIMAROEnv, LlataEnv):
         return obs, info
 
     def step(self, action):
-        next_obs, reward, done, info = super().step(action)
+        next_obs, reward, done, info = LlataEnv.step(self, action)
 
         true_level = level2true_level[self.level]
         terminal_kwargs = dict(
@@ -121,11 +123,12 @@ class BallEnv(RIMAROEnv, LlataEnv):
             self.path_dict[key] = download_dataset_from_url(url)
 
     def get_dataset(self, **kwargs):
-        self.level = kwargs.get('level', 'real')
+        self.level = kwargs.get('level', 'rephrase')
 
         assert self.level in LEVEL_LIST, f'level should be in {LEVEL_LIST}, but got {self.level}'
-        assert self.path_dict is not None, 'Dataset path is not initialized.'
 
+        if 'real_h5' not in self.path_dict.keys():
+            self.path_dict['real_h5'] = download_dataset_from_url(self.dataset_url_dict['real_h5'])
         real_dataset_path = self.path_dict['real_h5']
         with h5py.File(real_dataset_path, 'r') as f:
             real_dataset = {
@@ -134,6 +137,9 @@ class BallEnv(RIMAROEnv, LlataEnv):
                 'actions': f['actions'][:],
                 'rewards': f['rewards'][:],
             }
+        
+        if f'imaginary_{self.level}_h5' not in self.path_dict.keys():
+            self.path_dict[f'imaginary_{self.level}_h5'] = download_dataset_from_url(self.dataset_url_dict[f'imaginary_{self.level}_h5'])
         imaginary_level_dataset_path = self.path_dict[f'imaginary_{self.level}_h5']
         with h5py.File(imaginary_level_dataset_path, 'r') as f:
             imaginary_level_dataset = {

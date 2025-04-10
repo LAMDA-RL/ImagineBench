@@ -285,8 +285,8 @@ class MetaWorldEnv:
         self.action_space = self.env_list[0].action_space
         
         # 指令可以基于 env_name 获取, 数据集(obs, action, mask, reward)统一存为 h5
-        self.path_dict = None
-        self.init_dataset()
+        self.path_dict = {}
+        # self.init_dataset()
     
     def get_policy_obs(self, obs: np.ndarray):
         env_name = self.env_name_list[self.ptr]
@@ -334,11 +334,12 @@ class MetaWorldEnv:
             self.path_dict[key] = download_dataset_from_url(url)
 
     def get_dataset(self, **kwargs):
-        self.level = kwargs.get('level', 'real')
+        self.level = kwargs.get('level', 'rephrase')
 
         assert self.level in LEVEL_LIST, f'level should be in {LEVEL_LIST}, but got {self.level}'
-        assert self.path_dict is not None, 'Dataset path is not initialized.'
 
+        if 'real_h5' not in self.path_dict.keys():
+            self.path_dict['real_h5'] = download_dataset_from_url(self.dataset_url_dict['real_h5'])
         real_dataset_path = self.path_dict['real_h5']
         with h5py.File(real_dataset_path, 'r') as f:
             real_dataset = {
@@ -347,6 +348,9 @@ class MetaWorldEnv:
                 'actions': f['actions'][:],
                 'rewards': f['rewards'][:],
             }
+        
+        if f'imaginary_{self.level}_h5' not in self.path_dict.keys():
+            self.path_dict[f'imaginary_{self.level}_h5'] = download_dataset_from_url(self.dataset_url_dict[f'imaginary_{self.level}_h5'])
         imaginary_level_dataset_path = self.path_dict[f'imaginary_{self.level}_h5']
         with h5py.File(imaginary_level_dataset_path, 'r') as f:
             imaginary_level_dataset = {

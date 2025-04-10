@@ -1,8 +1,8 @@
-from rimaro import make, ENV_ID_LIST
+from rimro import make, ENV_ID_LIST
 
 
 if __name__ == '__main__':
-    for env_id in ENV_ID_LIST:
+    for env_id in ENV_ID_LIST[1:]:
         print(f"env_id: {env_id}")
         env = make(env_id)
         done = False

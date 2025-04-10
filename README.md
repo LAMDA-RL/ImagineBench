@@ -37,6 +37,23 @@ We are actively preparing:
 - Real+LLM-imaginary rollouts
 - Varying task difficulty levels
 
+## Installtion
+
+Please run the following commands in the given order to install the dependency for **RIMRO**.
+
+```
+conda create -n rimro python=3.10.13
+conda activate rimro
+git clone git@github.com:LAMDA-RL/RIMRO.git
+cd RIMRO
+pip install -r requirements.txt
+```
+Then install the RIMRO package:
+```
+pip install -e .
+```
+If you want to use libero env, please install [LIBERO](https://github.com/Lifelong-Robot-Learning/LIBERO) first.
+
 ## Basic usage
 
 Pseudo code for using the benchmark:

@@ -56,19 +56,15 @@ If you want to use libero env, please install [LIBERO](https://github.com/Lifelo
 
 ## Basic usage
 
-Pseudo code for using the benchmark:
 
 ```python
 import rimro
 
-env = rimro.make('MetaWorld-v0')
+# Optional task_level: ['real', 'rephrase', 'easy', 'hard'].
+env = rimro.make('MetaWorld-v0', level='rephrase')
+real_data, imaginary_rollout_rephrase = env.get_dataset(level="rephrase") 
 
-# Obtain the dataset. Optional task_level: ['rephrase', 'easy', 'hard'].
-real_data, imaginary_rollout_rephrasing = env.get_dataset(level="rephrase") 
-
-# Train policy with any offline RL algorithms
-policy = offline_rl(real_data, imaginary_rollout_rephrasing)
-
-# Evaluate the policy
-eval_result = eval_policy(policy, env, level="rephrase")
+# Or you can use the dataset with other task levels.
+env = rimro.make('MetaWorld-v0', level='easy')
+real_data, imaginary_rollout_easy = env.get_dataset(level="easy")
 ```

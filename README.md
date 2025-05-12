@@ -1,6 +1,7 @@
-<h1>RIMRO: Benchmark for <u>R</u>einforcement Learning from <u>Im</u>aginary <u>Ro</u>llouts</h1>
+<h1>ImagineBench: Evaluating Reinforcement Learning
+with Large Language Model Rollouts</h1>
 
-[![Project Status: Active](https://img.shields.io/badge/status-active-green)](https://github.com/LAMDA-RL/RIMRO)
+[![Project Status: Active](https://img.shields.io/badge/status-active-green)](https://github.com/LAMDA-RL/ImagineBench)
 
 ## Overview
 
@@ -39,16 +40,16 @@ We are actively preparing:
 
 ## Installtion
 
-Please run the following commands in the given order to install the dependency for **RIMRO**.
+Please run the following commands in the given order to install the dependency for **ImagineBench**.
 
 ```
-conda create -n rimro python=3.10.13
-conda activate rimro
-git clone git@github.com:LAMDA-RL/RIMRO.git
-cd RIMRO
+conda create -n imagine_bench python=3.10.13
+conda activate imagine_bench
+git clone git@github.com:LAMDA-RL/ImagineBench.git
+cd imagine_bench
 pip install -r requirements.txt
 ```
-Then install the RIMRO package:
+Then install the ImagineBench package:
 ```
 pip install -e .
 ```
@@ -58,13 +59,13 @@ If you want to use libero env, please install [LIBERO](https://github.com/Lifelo
 
 
 ```python
-import rimro
+import imagine_bench
 
 # Optional task_level: ['real', 'rephrase', 'easy', 'hard'].
-env = rimro.make('MetaWorld-v0', level='rephrase')
+env = imagine_bench.make('MetaWorld-v0', level='rephrase')
 real_data, imaginary_rollout_rephrase = env.get_dataset(level="rephrase") 
 
 # Or you can use the dataset with other task levels.
-env = rimro.make('MetaWorld-v0', level='easy')
+env = imagine_bench.make('MetaWorld-v0', level='easy')
 real_data, imaginary_rollout_easy = env.get_dataset(level="easy")
 ```

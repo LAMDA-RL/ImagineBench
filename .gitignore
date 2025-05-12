@@ -2,6 +2,6 @@ __pycache__
 .idea/
 /*.egg-info/
 /.vscode/
-/rimro/envs/data
-!/rimro/envs/data/meta_instructions_encoding.npy
-!/rimro/envs/data/noisy_state_test.npy
+/imagine_bench/envs/data
+!/imagine_bench/envs/data/meta_instructions_encoding.npy
+!/imagine_bench/envs/data/noisy_state_test.npy

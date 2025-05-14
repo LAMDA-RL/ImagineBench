@@ -525,11 +525,50 @@ class VectorLibero(gym.Env):
         return instructions
 
     def place_instructions(self, obj):
-        instructions = [f'Transfer the {obj} to the basket.']
+        instructions = [f'Transfer the {obj} to the basket.',
+                        f'Shift the {obj} to the basket.',
+                        f'Position the {obj} to the basket.',
+                        f'Move the {obj} to the basket.',
+                        f'Place the {obj} to the basket.',
+                        f'Relocate the {obj} to the basket.',
+                        f'Deposit the {obj} to the basket.',
+                        f'Put the {obj} in the basket.',
+                        f'Drop the {obj} into the basket.',
+                        f'Deliver the {obj} to the basket.',
+                        f'Set the {obj} in the basket.',
+                        f'Lay the {obj} in the basket.',
+                        f'Load the {obj} into the basket.',
+                        f'Carry the {obj} to the basket.',
+                        f'Convey the {obj} to the basket.',
+                        f'Shift the {obj} into the basket.',
+                        f'Arrange the {obj} in the basket.',
+                        f'Displace the {obj} to the basket.',
+                        f'Drag the {obj} to the basket.',
+                        f'Guide the {obj} to the basket.']
         return instructions
 
     def pick_instructions(self, obj):
-        instructions = [f'Employ the gripper to seize the {obj}.']
+        instructions = [f'Employ the gripper to seize the {obj}.',
+            f'Utilize the gripper for grasping the {obj}.',
+            f'Employ the gripper mechanism to grasp the {obj}.',
+            f'Apply the gripper tool to grasp the {obj}.',
+            f'Use the gripper device to seize the {obj}.',
+            f'Utilize the gripper apparatus to capture the {obj}.',
+            f'Employ the gripper mechanism to clasp the {obj}.'
+            f'Engage the gripper to grasp the {obj}.',
+            f'Deploy the gripper to seize the {obj}.',
+            f'Make use of the gripper to hold the {obj}.',
+            f'Operate the gripper to grasp the {obj}.',
+            f'Activate the gripper to clutch the {obj}.',
+            f'Employ the robotic gripper to capture the {obj}.',
+            f'Use the gripping tool to secure the {obj}.',
+            f'Utilize the gripper attachment to grasp the {obj}.',
+            f'Apply the gripping mechanism to seize the {obj}.',
+            f'Leverage the gripper device to clasp the {obj}.',
+            f'Engage the gripper mechanism to secure the {obj}.',
+            f'Activate the gripping device to hold the {obj}.',
+            f'Deploy the gripper tool to clasp the {obj}.',
+            f'Use the robotic gripper to grasp the {obj}.']
         return instructions
     
     def get_reward_and_done(self, state, last_state, env_name):

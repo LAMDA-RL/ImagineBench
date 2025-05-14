@@ -9,6 +9,7 @@ import random
 import matplotlib.pyplot as plt
 from gymnasium import Env, Wrapper
 from gymnasium.core import Any, WrapperObsType, WrapperActType
+from stable_baselines3.common.vec_env import SubprocVecEnv
 
 #easy level
 
@@ -179,11 +180,19 @@ class VectorLibero(gym.Env):
         }
         self.env = OffScreenRenderEnv(**env_args)
         self.env.seed(0)
-        self.state, self.img = self.reset()
+        self.state, self.img = self.reset_with_img()
         self.instructions = self.get_instructions(self.env_name)
         self.max_steps = 500
         self.step_count = 0
-
+        self.observation_space = spaces.Box(low=-1, high=1, shape=(44,), dtype=np.float32)
+        self.action_space = spaces.Box(low=-1, high=1, shape=(7,), dtype=np.float32)
+        self.grasped1 = False
+        self.grasped2 = False
+        self.grasped3 = False
+        self.placed1 = False
+        self.placed2 = False
+        self.placed3 = False
+        self.init_state = None
     def reset(self):
         self.env.reset()
         default_init_states = self.get_default_init_states(self.env_name)
@@ -195,6 +204,45 @@ class VectorLibero(gym.Env):
             obs, reward, done, info = self.env.step(dummy_action)
         obs, img = self.get_observation(obs)
         self.step_count = 0
+        self.grasped1 = False
+        self.grasped2 = False
+        self.grasped3 = False
+        self.placed1 = False
+        self.placed2 = False
+        self.placed3 = False
+        self.init_state = None
+        return obs
+    
+    def reset_with_img(self):
+        obs = self.env.reset()
+        
+        # image = Image.fromarray(obs['agentview_image'])
+        # # Save the image as a PNG file
+        # image.save(f"output_image_reset7.png")
+        # x = aaa
+        default_init_states = self.get_default_init_states(self.env_name)
+        init_state_id = random.randint(0, len(default_init_states)-1)
+        init_state = self.get_init_state(self.env_name, default_init_states, init_state_id)
+        # print(self.env.sim.data.qpos.size)
+        # print(self.env.sim.data.qvel.size)
+        # print(init_state, init_state.shape)
+        obs = self.env.set_init_state(init_state)
+        # image = Image.fromarray(obs['agentview_image'])
+        # # Save the image as a PNG file
+        # image.save(f"output_image_reset7.png")
+        # x = aaa
+        dummy_action = [0.] * 7
+        for step in range(5):
+            obs, reward, done, info = self.env.step(dummy_action)
+        obs, img = self.get_observation(obs)
+        self.step_count = 0
+        self.grasped1 = False
+        self.grasped2 = False
+        self.grasped3 = False
+        self.placed1 = False
+        self.placed2 = False
+        self.placed3 = False
+        self.init_state = None
         return obs, img
     
     def get_observation(self, obs):
@@ -219,7 +267,12 @@ class VectorLibero(gym.Env):
         #     self.env.close()
         self.state = state
         self.img = obs["agentview_image"]
-        return state, reward, terminated, truncated, info
+        done = terminated or truncated
+        if terminated:
+            info['success'] = True
+        else:
+            info['success'] = False
+        return state, reward, done, info
     def render(self):
         return self.img
     
@@ -322,32 +375,24 @@ class VectorLibero(gym.Env):
     def get_init_state(self, env_name, default_init_states, init_state_id):
         default_init_state = default_init_states[init_state_id]
         if env_name in pick_env_name_list:
-            task_bddl_file = os.path.join(os.path.dirname(__file__),"./libero_files/pick_up_the_alphabet_soup_and_place_it_in_the_basket.bddl")
-
-            env_args = {
-                "bddl_file_name": task_bddl_file,
-                "camera_heights": 128,
-                "camera_widths": 128
-            }
-            env = OffScreenRenderEnv(**env_args)
-            env.seed(0)
-            env.reset()
-            obs = env.set_init_state(default_init_state)
-            robot_state = default_init_state[0:10]
-            obj1_state = np.concatenate([obs["alphabet_soup_1_pos"], obs["alphabet_soup_1_quat"]], axis=0)
-            obj2_state = np.concatenate([obs["cream_cheese_1_pos"], obs["cream_cheese_1_quat"]], axis=0)
-            if env_name in cream_cheese_env_name_list:
-                obj3_state = np.concatenate([obs["tomato_sauce_1_pos"], obs["tomato_sauce_1_quat"]], axis=0)
-            else:
-                obj3_state = np.concatenate([obs["salad_dressing_1_pos"], obs["salad_dressing_1_quat"]], axis=0)
-            basket_state = np.concatenate([obs["basket_1_pos"], obs["basket_1_quat"]], axis=0)
+            if env_name in alphabet_soup_env_name_list:
+                with np.load(os.path.join(os.path.dirname(__file__),"./libero_files/pick_alphabet_soup_inits.npz"), allow_pickle=True) as data:
+                    loaded_data_observations = data["observations"]
+            elif env_name in cream_cheese_env_name_list:
+                with np.load(os.path.join(os.path.dirname(__file__),"./libero_files/pick_cream_cheese_inits.npz"), allow_pickle=True) as data:
+                    loaded_data_observations = data["observations"]
+            elif env_name in salad_dressing_env_name_list:
+                with np.load(os.path.join(os.path.dirname(__file__),"./libero_files/pick_salad_dressing_inits.npz"), allow_pickle=True) as data:
+                    loaded_data_observations = data["observations"]
+            state = loaded_data_observations[random.choice(range(0, 1000))]
             init_state = np.zeros(71)
-            init_state[0:10] = robot_state
+            init_state[1:8] = state[0:7]
+            init_state[8:10] = state[14:16]
+            obj1_state, obj2_state, obj3_state, basket_state = state[16:23], state[23:30], state[30:37], state[37:]
             init_state[10:10+7] = self.pos_quat_transfer(obj1_state)
             init_state[10+7:10+7+7] = self.pos_quat_transfer(basket_state)
             init_state[10+7+7:10+7+7+7] = self.pos_quat_transfer(obj3_state)
             init_state[10+7+7+7:10+7+7+7+7] = self.pos_quat_transfer(obj2_state)
-            env.close()
         elif env_name in place_env_name_list:
             if env_name in alphabet_soup_env_name_list:
                 with np.load(os.path.join(os.path.dirname(__file__),"./libero_files/place_alphabet_soup_inits.npz"), allow_pickle=True) as data:
@@ -369,13 +414,13 @@ class VectorLibero(gym.Env):
             init_state[10+7+7+7:10+7+7+7+7] = self.pos_quat_transfer(obj2_state)
         elif env_name in safe_env_name_list:
             if env_name in alphabet_soup_env_name_list:
-                with np.load(os.path.join(os.path.dirname(__file__),"./libero_files/place_alphabet_soup_inits.npz"), allow_pickle=True) as data:
+                with np.load(os.path.join(os.path.dirname(__file__),"./libero_files/safe_alphabet_soup_inits.npz"), allow_pickle=True) as data:
                     loaded_data_observations = data["observations"]
             elif env_name in cream_cheese_env_name_list:
-                with np.load(os.path.join(os.path.dirname(__file__),"./libero_files/place_cream_cheese_inits.npz"), allow_pickle=True) as data:
+                with np.load(os.path.join(os.path.dirname(__file__),"./libero_files/safe_cream_cheese_inits.npz"), allow_pickle=True) as data:
                     loaded_data_observations = data["observations"]
             elif env_name in salad_dressing_env_name_list:
-                with np.load(os.path.join(os.path.dirname(__file__),"./libero_files/place_salad_dressing_inits.npz"), allow_pickle=True) as data:
+                with np.load(os.path.join(os.path.dirname(__file__),"./libero_files/safe_salad_dressing_inits.npz"), allow_pickle=True) as data:
                     loaded_data_observations = data["observations"]
             state = loaded_data_observations[random.choice(range(0, 1000))]
             init_state = np.zeros(71)
@@ -480,53 +525,16 @@ class VectorLibero(gym.Env):
         return instructions
 
     def place_instructions(self, obj):
-        instructions = [f'Transfer the {obj} to the basket.',
-                        f'Shift the {obj} to the basket.',
-                        f'Position the {obj} to the basket.',
-                        f'Move the {obj} to the basket.',
-                        f'Place the {obj} to the basket.',
-                        f'Relocate the {obj} to the basket.',
-                        f'Deposit the {obj} to the basket.',
-                        f'Put the {obj} in the basket.',
-                        f'Drop the {obj} into the basket.',
-                        f'Deliver the {obj} to the basket.',
-                        f'Set the {obj} in the basket.',
-                        f'Lay the {obj} in the basket.',
-                        f'Load the {obj} into the basket.',
-                        f'Carry the {obj} to the basket.',
-                        f'Convey the {obj} to the basket.',
-                        f'Shift the {obj} into the basket.',
-                        f'Arrange the {obj} in the basket.',
-                        f'Displace the {obj} to the basket.',
-                        f'Drag the {obj} to the basket.',
-                        f'Guide the {obj} to the basket.']
+        instructions = [f'Transfer the {obj} to the basket.']
         return instructions
 
     def pick_instructions(self, obj):
-        instructions = [f'Employ the gripper to seize the {obj}.',
-            f'Utilize the gripper for grasping the {obj}.',
-            f'Employ the gripper mechanism to grasp the {obj}.',
-            f'Apply the gripper tool to grasp the {obj}.',
-            f'Use the gripper device to seize the {obj}.',
-            f'Utilize the gripper apparatus to capture the {obj}.',
-            f'Employ the gripper mechanism to clasp the {obj}.'
-            f'Engage the gripper to grasp the {obj}.',
-            f'Deploy the gripper to seize the {obj}.',
-            f'Make use of the gripper to hold the {obj}.',
-            f'Operate the gripper to grasp the {obj}.',
-            f'Activate the gripper to clutch the {obj}.',
-            f'Employ the robotic gripper to capture the {obj}.',
-            f'Use the gripping tool to secure the {obj}.',
-            f'Utilize the gripper attachment to grasp the {obj}.',
-            f'Apply the gripping mechanism to seize the {obj}.',
-            f'Leverage the gripper device to clasp the {obj}.',
-            f'Engage the gripper mechanism to secure the {obj}.',
-            f'Activate the gripping device to hold the {obj}.',
-            f'Deploy the gripper tool to clasp the {obj}.',
-            f'Use the robotic gripper to grasp the {obj}.']
+        instructions = [f'Employ the gripper to seize the {obj}.']
         return instructions
     
     def get_reward_and_done(self, state, last_state, env_name):
+        if self.init_state is None:
+            self.init_state = state
         done = False
         reward = 0
         robot_dim = [7,8,9]
@@ -537,638 +545,1097 @@ class VectorLibero(gym.Env):
         if env_name == 'pick-alphabet_soup':
             obj_pos = state[alphabet_soup_dim]
             robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
             last_obj_pos = last_state[alphabet_soup_dim]
             dist_obj_to_robot = np.linalg.norm(obj_pos - robot_pos)
+            last_dist_obj_to_robot = np.linalg.norm(last_obj_pos - last_robot_pos)
+            reward_dist = last_dist_obj_to_robot - dist_obj_to_robot
             dist_obj = np.linalg.norm(obj_pos - last_obj_pos)
-            if dist_obj_to_robot < 0.025 and dist_obj > 0.0001:
+            reward += 20 * reward_dist
+            # print(reward, dist_obj_to_robot)
+            if dist_obj_to_robot < 0.05 and dist_obj > 0.0001:
                 reward += 1
                 done = True
         elif env_name == 'pick-cream_cheese':
             obj_pos = state[cream_cheese_dim]
             robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
             last_obj_pos = last_state[cream_cheese_dim]
             dist_obj_to_robot = np.linalg.norm(obj_pos - robot_pos)
+            last_dist_obj_to_robot = np.linalg.norm(last_obj_pos - last_robot_pos)
+            reward_dist = last_dist_obj_to_robot - dist_obj_to_robot
             dist_obj = np.linalg.norm(obj_pos - last_obj_pos)
-            if dist_obj_to_robot < 0.03 and dist_obj > 0.0001:
+            reward += 20 * reward_dist
+            if dist_obj_to_robot < 0.05 and dist_obj > 0.0001:
                 reward += 1
                 done = True
         elif env_name == 'pick-salad_dressing':
             obj_pos = state[salad_dressing_dim]
             robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
             last_obj_pos = last_state[salad_dressing_dim]
             dist_obj_to_robot = np.linalg.norm(obj_pos - robot_pos)
+            last_dist_obj_to_robot = np.linalg.norm(last_obj_pos - last_robot_pos)
+            reward_dist = last_dist_obj_to_robot - dist_obj_to_robot
             dist_obj = np.linalg.norm(obj_pos - last_obj_pos)
-            if dist_obj_to_robot < 0.03 and dist_obj > 0.0001:
+            reward += 20 * reward_dist
+            if dist_obj_to_robot < 0.05 and dist_obj > 0.0001:
                 reward += 1
                 done = True
         elif env_name == 'place-alphabet_soup':
             obj_pos = state[alphabet_soup_dim]
+            last_obj_pos = last_state[alphabet_soup_dim]
             basket_pos = state[basket_dim]
+            last_basket_pos = last_state[basket_dim]
+            dist_obj_to_basket = np.linalg.norm(obj_pos - basket_pos)
+            last_dist_obj_to_basket = np.linalg.norm(last_obj_pos - last_basket_pos)
+            reward_dist = last_dist_obj_to_basket - dist_obj_to_basket
+            reward += 20 * reward_dist
             dist_obj_to_basket_xy = np.linalg.norm(obj_pos[0:2] - basket_pos[0:2])
             dist_obj_to_basket_z = np.linalg.norm(obj_pos[2:] - basket_pos[2:])
-            if dist_obj_to_basket_xy < 0.05 and dist_obj_to_basket_z < 0.155:
+            if dist_obj_to_basket_xy < 0.14 and dist_obj_to_basket_z < 0.155:
                 reward += 1
                 done = True
         elif env_name == 'place-cream_cheese':
             obj_pos = state[cream_cheese_dim]
+            last_obj_pos = last_state[cream_cheese_dim]
             basket_pos = state[basket_dim]
+            last_basket_pos = last_state[basket_dim]
+            dist_obj_to_basket = np.linalg.norm(obj_pos - basket_pos)
+            last_dist_obj_to_basket = np.linalg.norm(last_obj_pos - last_basket_pos)
+            reward_dist = last_dist_obj_to_basket - dist_obj_to_basket
+            reward += 20 * reward_dist
             dist_obj_to_basket_xy = np.linalg.norm(obj_pos[0:2] - basket_pos[0:2])
             dist_obj_to_basket_z = np.linalg.norm(obj_pos[2:] - basket_pos[2:])
-            if dist_obj_to_basket_xy < 0.05 and dist_obj_to_basket_z < 0.155:
+            if dist_obj_to_basket_xy < 0.14 and dist_obj_to_basket_z < 0.155:
                 reward += 1
                 done = True
         elif env_name == 'place-salad_dressing':
             obj_pos = state[salad_dressing_dim]
+            last_obj_pos = last_state[salad_dressing_dim]
             basket_pos = state[basket_dim]
+            last_basket_pos = last_state[basket_dim]
+            dist_obj_to_basket = np.linalg.norm(obj_pos - basket_pos)
+            last_dist_obj_to_basket = np.linalg.norm(last_obj_pos - last_basket_pos)
+            reward_dist = last_dist_obj_to_basket - dist_obj_to_basket
+            reward += 20 * reward_dist
             dist_obj_to_basket_xy = np.linalg.norm(obj_pos[0:2] - basket_pos[0:2])
             dist_obj_to_basket_z = np.linalg.norm(obj_pos[2:] - basket_pos[2:])
-            if dist_obj_to_basket_xy < 0.05 and dist_obj_to_basket_z < 0.155:
+            if dist_obj_to_basket_xy < 0.14 and dist_obj_to_basket_z < 0.22:
                 reward += 1
                 done = True
         elif env_name == 'rep-pick-alphabet_soup':
             obj_pos = state[alphabet_soup_dim]
             robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
             last_obj_pos = last_state[alphabet_soup_dim]
             dist_obj_to_robot = np.linalg.norm(obj_pos - robot_pos)
+            last_dist_obj_to_robot = np.linalg.norm(last_obj_pos - last_robot_pos)
+            reward_dist = last_dist_obj_to_robot - dist_obj_to_robot
             dist_obj = np.linalg.norm(obj_pos - last_obj_pos)
-            if dist_obj_to_robot < 0.03 and dist_obj > 0.0001:
+            reward += 20 * reward_dist
+            # print(reward, dist_obj_to_robot)
+            if dist_obj_to_robot < 0.05 and dist_obj > 0.0001:
                 reward += 1
                 done = True
         elif env_name == 'rep-pick-cream_cheese':
             obj_pos = state[cream_cheese_dim]
             robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
             last_obj_pos = last_state[cream_cheese_dim]
             dist_obj_to_robot = np.linalg.norm(obj_pos - robot_pos)
+            last_dist_obj_to_robot = np.linalg.norm(last_obj_pos - last_robot_pos)
+            reward_dist = last_dist_obj_to_robot - dist_obj_to_robot
             dist_obj = np.linalg.norm(obj_pos - last_obj_pos)
-            if dist_obj_to_robot < 0.03 and dist_obj > 0.0001:
+            reward += 20 * reward_dist
+            # print(reward, dist_obj_to_robot)
+            if dist_obj_to_robot < 0.05 and dist_obj > 0.0001:
                 reward += 1
                 done = True
         elif env_name == 'rep-pick-salad_dressing':
             obj_pos = state[salad_dressing_dim]
             robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
             last_obj_pos = last_state[salad_dressing_dim]
             dist_obj_to_robot = np.linalg.norm(obj_pos - robot_pos)
+            last_dist_obj_to_robot = np.linalg.norm(last_obj_pos - last_robot_pos)
+            reward_dist = last_dist_obj_to_robot - dist_obj_to_robot
             dist_obj = np.linalg.norm(obj_pos - last_obj_pos)
-            if dist_obj_to_robot < 0.03 and dist_obj > 0.0001:
+            reward += 20 * reward_dist
+            # print(reward, dist_obj_to_robot)
+            if dist_obj_to_robot < 0.05 and dist_obj > 0.0001:
                 reward += 1
                 done = True
         elif env_name == 'rep-place-alphabet_soup':
             obj_pos = state[alphabet_soup_dim]
+            last_obj_pos = last_state[alphabet_soup_dim]
             basket_pos = state[basket_dim]
+            last_basket_pos = last_state[basket_dim]
+            dist_obj_to_basket = np.linalg.norm(obj_pos - basket_pos)
+            last_dist_obj_to_basket = np.linalg.norm(last_obj_pos - last_basket_pos)
+            reward_dist = last_dist_obj_to_basket - dist_obj_to_basket
+            reward += 20 * reward_dist
             dist_obj_to_basket_xy = np.linalg.norm(obj_pos[0:2] - basket_pos[0:2])
             dist_obj_to_basket_z = np.linalg.norm(obj_pos[2:] - basket_pos[2:])
-            if dist_obj_to_basket_xy < 0.05 and dist_obj_to_basket_z < 0.155:
+            if dist_obj_to_basket_xy < 0.14 and dist_obj_to_basket_z < 0.155:
                 reward += 1
                 done = True
         elif env_name == 'rep-place-cream_cheese':
             obj_pos = state[cream_cheese_dim]
+            last_obj_pos = last_state[cream_cheese_dim]
             basket_pos = state[basket_dim]
+            last_basket_pos = last_state[basket_dim]
+            dist_obj_to_basket = np.linalg.norm(obj_pos - basket_pos)
+            last_dist_obj_to_basket = np.linalg.norm(last_obj_pos - last_basket_pos)
+            reward_dist = last_dist_obj_to_basket - dist_obj_to_basket
+            reward += 20 * reward_dist
             dist_obj_to_basket_xy = np.linalg.norm(obj_pos[0:2] - basket_pos[0:2])
             dist_obj_to_basket_z = np.linalg.norm(obj_pos[2:] - basket_pos[2:])
-            if dist_obj_to_basket_xy < 0.05 and dist_obj_to_basket_z < 0.155:
+            if dist_obj_to_basket_xy < 0.14 and dist_obj_to_basket_z < 0.155:
                 reward += 1
                 done = True
         elif env_name == 'rep-place-salad_dressing':
             obj_pos = state[salad_dressing_dim]
+            last_obj_pos = last_state[salad_dressing_dim]
             basket_pos = state[basket_dim]
+            last_basket_pos = last_state[basket_dim]
+            dist_obj_to_basket = np.linalg.norm(obj_pos - basket_pos)
+            last_dist_obj_to_basket = np.linalg.norm(last_obj_pos - last_basket_pos)
+            reward_dist = last_dist_obj_to_basket - dist_obj_to_basket
+            reward += 20 * reward_dist
             dist_obj_to_basket_xy = np.linalg.norm(obj_pos[0:2] - basket_pos[0:2])
             dist_obj_to_basket_z = np.linalg.norm(obj_pos[2:] - basket_pos[2:])
-            if dist_obj_to_basket_xy < 0.05 and dist_obj_to_basket_z < 0.155:
+            if dist_obj_to_basket_xy < 0.14 and dist_obj_to_basket_z < 0.22:
                 reward += 1
                 done = True
         elif env_name == 'pick-and-place-alphabet_soup':
-            grasped = False
             obj_pos = state[alphabet_soup_dim]
             robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
             basket_pos = state[basket_dim]
+            last_basket_pos = last_state[basket_dim]
             last_obj_pos = last_state[alphabet_soup_dim]
             dist_obj_to_robot = np.linalg.norm(obj_pos - robot_pos)
+            last_dist_obj_to_robot = np.linalg.norm(last_obj_pos - last_robot_pos)
             dist_obj = np.linalg.norm(obj_pos - last_obj_pos)
+            dist_obj_to_basket = np.linalg.norm(obj_pos - basket_pos)
+            last_dist_obj_to_basket = np.linalg.norm(last_obj_pos - last_basket_pos)
             dist_obj_to_basket_xy = np.linalg.norm(obj_pos[0:2] - basket_pos[0:2])
             dist_obj_to_basket_z = np.linalg.norm(obj_pos[2:] - basket_pos[2:])
-            if not grasped and dist_obj_to_robot < 0.03 and dist_obj > 0.0001:
-                grasped = True
+            reward_pick = last_dist_obj_to_robot - dist_obj_to_robot
+            reward_place = last_dist_obj_to_basket - dist_obj_to_basket
+            if not self.grasped1:
+                reward = reward + 20 * reward_pick
+            else:
+                reward = reward + 20 * reward_place
+            if not self.grasped1 and dist_obj_to_robot < 0.05 and dist_obj > 0.0001:
+                self.grasped1 = True
                 reward += 1
-            if dist_obj_to_basket_xy < 0.05 and dist_obj_to_basket_z < 0.155:
+            if dist_obj_to_basket_xy < 0.14 and dist_obj_to_basket_z < 0.155:
                 reward += 1
                 done = True
         elif env_name == 'pick-and-place-cream_cheese':
-            grasped = False
             obj_pos = state[cream_cheese_dim]
             robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
             basket_pos = state[basket_dim]
+            last_basket_pos = last_state[basket_dim]
             last_obj_pos = last_state[cream_cheese_dim]
             dist_obj_to_robot = np.linalg.norm(obj_pos - robot_pos)
+            last_dist_obj_to_robot = np.linalg.norm(last_obj_pos - last_robot_pos)
             dist_obj = np.linalg.norm(obj_pos - last_obj_pos)
+            dist_obj_to_basket = np.linalg.norm(obj_pos - basket_pos)
+            last_dist_obj_to_basket = np.linalg.norm(last_obj_pos - last_basket_pos)
             dist_obj_to_basket_xy = np.linalg.norm(obj_pos[0:2] - basket_pos[0:2])
             dist_obj_to_basket_z = np.linalg.norm(obj_pos[2:] - basket_pos[2:])
-            if not grasped and dist_obj_to_robot < 0.03 and dist_obj > 0.0001:
-                grasped = True
+            reward_pick = last_dist_obj_to_robot - dist_obj_to_robot
+            reward_place = last_dist_obj_to_basket - dist_obj_to_basket
+            if not self.grasped1:
+                reward = reward + 20 * reward_pick
+            else:
+                reward = reward + 20 * reward_place
+            if not self.grasped1 and dist_obj_to_robot < 0.05 and dist_obj > 0.0001:
+                self.grasped1 = True
                 reward += 1
-            if dist_obj_to_basket_xy < 0.05 and dist_obj_to_basket_z < 0.155:
+            if dist_obj_to_basket_xy < 0.14 and dist_obj_to_basket_z < 0.155:
                 reward += 1
                 done = True
         elif env_name == 'pick-and-place-salad_dressing':
-            grasped = False
             obj_pos = state[salad_dressing_dim]
             robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
             basket_pos = state[basket_dim]
+            last_basket_pos = last_state[basket_dim]
             last_obj_pos = last_state[salad_dressing_dim]
             dist_obj_to_robot = np.linalg.norm(obj_pos - robot_pos)
+            last_dist_obj_to_robot = np.linalg.norm(last_obj_pos - last_robot_pos)
             dist_obj = np.linalg.norm(obj_pos - last_obj_pos)
+            dist_obj_to_basket = np.linalg.norm(obj_pos - basket_pos)
+            last_dist_obj_to_basket = np.linalg.norm(last_obj_pos - last_basket_pos)
             dist_obj_to_basket_xy = np.linalg.norm(obj_pos[0:2] - basket_pos[0:2])
             dist_obj_to_basket_z = np.linalg.norm(obj_pos[2:] - basket_pos[2:])
-            if not grasped and dist_obj_to_robot < 0.03 and dist_obj > 0.0001:
-                grasped = True
+            reward_pick = last_dist_obj_to_robot - dist_obj_to_robot
+            reward_place = last_dist_obj_to_basket - dist_obj_to_basket
+            if not self.grasped1:
+                reward = reward + 20 * reward_pick
+            else:
+                reward = reward + 20 * reward_place
+            if not self.grasped1 and dist_obj_to_robot < 0.05 and dist_obj > 0.0001:
+                self.grasped1 = True
                 reward += 1
-            if dist_obj_to_basket_xy < 0.05 and dist_obj_to_basket_z < 0.155:
+            if dist_obj_to_basket_xy < 0.14 and dist_obj_to_basket_z < 0.22:
                 reward += 1
                 done = True
         elif env_name == 'pick-alphabet_soup-and-place-to-cream_cheese':
-            grasped = False
             obj_pos = state[alphabet_soup_dim]
             robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
             basket_pos = state[cream_cheese_dim]
+            last_basket_pos = last_state[cream_cheese_dim]
             last_obj_pos = last_state[alphabet_soup_dim]
             dist_obj_to_robot = np.linalg.norm(obj_pos - robot_pos)
+            last_dist_obj_to_robot = np.linalg.norm(last_obj_pos - last_robot_pos)
             dist_obj = np.linalg.norm(obj_pos - last_obj_pos)
+            dist_obj_to_basket = np.linalg.norm(obj_pos - basket_pos)
+            last_dist_obj_to_basket = np.linalg.norm(last_obj_pos - last_basket_pos)
             dist_obj_to_basket_xy = np.linalg.norm(obj_pos[0:2] - basket_pos[0:2])
             dist_obj_to_basket_z = np.linalg.norm(obj_pos[2:] - basket_pos[2:])
-            if not grasped and dist_obj_to_robot < 0.03 and dist_obj > 0.0001:
-                grasped = True
+            reward_pick = last_dist_obj_to_robot - dist_obj_to_robot
+            reward_place = last_dist_obj_to_basket - dist_obj_to_basket
+            if not self.grasped1:
+                reward = reward + 20 * reward_pick
+            else:
+                reward = reward + 20 * reward_place
+            if not self.grasped1 and dist_obj_to_robot < 0.05 and dist_obj > 0.0001:
+                self.grasped1 = True
                 reward += 1
-            if dist_obj_to_basket_xy < 0.05 and dist_obj_to_basket_z < 0.155:
+            if dist_obj_to_basket_xy < 0.1 and dist_obj_to_basket_z < 0.22:
                 reward += 1
                 done = True
         elif env_name == 'pick-alphabet_soup-and-place-to-salad_dressing':
-            grasped = False
             obj_pos = state[alphabet_soup_dim]
             robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
             basket_pos = state[salad_dressing_dim]
+            last_basket_pos = last_state[salad_dressing_dim]
             last_obj_pos = last_state[alphabet_soup_dim]
             dist_obj_to_robot = np.linalg.norm(obj_pos - robot_pos)
+            last_dist_obj_to_robot = np.linalg.norm(last_obj_pos - last_robot_pos)
             dist_obj = np.linalg.norm(obj_pos - last_obj_pos)
+            dist_obj_to_basket = np.linalg.norm(obj_pos - basket_pos)
+            last_dist_obj_to_basket = np.linalg.norm(last_obj_pos - last_basket_pos)
             dist_obj_to_basket_xy = np.linalg.norm(obj_pos[0:2] - basket_pos[0:2])
             dist_obj_to_basket_z = np.linalg.norm(obj_pos[2:] - basket_pos[2:])
-            if not grasped and dist_obj_to_robot < 0.03 and dist_obj > 0.0001:
-                grasped = True
+            reward_pick = last_dist_obj_to_robot - dist_obj_to_robot
+            reward_place = last_dist_obj_to_basket - dist_obj_to_basket
+            if not self.grasped1:
+                reward = reward + 20 * reward_pick
+            else:
+                reward = reward + 20 * reward_place
+            if not self.grasped1 and dist_obj_to_robot < 0.05 and dist_obj > 0.0001:
+                self.grasped1 = True
                 reward += 1
-            if dist_obj_to_basket_xy < 0.05 and dist_obj_to_basket_z < 0.155:
+            if dist_obj_to_basket_xy < 0.1 and dist_obj_to_basket_z < 0.22:
                 reward += 1
                 done = True
         elif env_name == 'pick-cream_cheese-and-place-to-alphabet_soup':
-            grasped = False
             obj_pos = state[cream_cheese_dim]
             robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
             basket_pos = state[alphabet_soup_dim]
+            last_basket_pos = last_state[alphabet_soup_dim]
             last_obj_pos = last_state[cream_cheese_dim]
             dist_obj_to_robot = np.linalg.norm(obj_pos - robot_pos)
+            last_dist_obj_to_robot = np.linalg.norm(last_obj_pos - last_robot_pos)
             dist_obj = np.linalg.norm(obj_pos - last_obj_pos)
+            dist_obj_to_basket = np.linalg.norm(obj_pos - basket_pos)
+            last_dist_obj_to_basket = np.linalg.norm(last_obj_pos - last_basket_pos)
             dist_obj_to_basket_xy = np.linalg.norm(obj_pos[0:2] - basket_pos[0:2])
             dist_obj_to_basket_z = np.linalg.norm(obj_pos[2:] - basket_pos[2:])
-            if not grasped and dist_obj_to_robot < 0.03 and dist_obj > 0.0001:
-                grasped = True
+            reward_pick = last_dist_obj_to_robot - dist_obj_to_robot
+            reward_place = last_dist_obj_to_basket - dist_obj_to_basket
+            if not self.grasped1:
+                reward = reward + 20 * reward_pick
+            else:
+                reward = reward + 20 * reward_place
+            if not self.grasped1 and dist_obj_to_robot < 0.05 and dist_obj > 0.0001:
+                self.grasped1 = True
                 reward += 1
-            if dist_obj_to_basket_xy < 0.05 and dist_obj_to_basket_z < 0.155:
+            if dist_obj_to_basket_xy < 0.1 and dist_obj_to_basket_z < 0.22:
                 reward += 1
                 done = True
         elif env_name == 'pick-cream_cheese-and-place-to-salad_dressing':
-            grasped = False
             obj_pos = state[cream_cheese_dim]
             robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
             basket_pos = state[salad_dressing_dim]
+            last_basket_pos = last_state[salad_dressing_dim]
             last_obj_pos = last_state[cream_cheese_dim]
             dist_obj_to_robot = np.linalg.norm(obj_pos - robot_pos)
+            last_dist_obj_to_robot = np.linalg.norm(last_obj_pos - last_robot_pos)
             dist_obj = np.linalg.norm(obj_pos - last_obj_pos)
+            dist_obj_to_basket = np.linalg.norm(obj_pos - basket_pos)
+            last_dist_obj_to_basket = np.linalg.norm(last_obj_pos - last_basket_pos)
             dist_obj_to_basket_xy = np.linalg.norm(obj_pos[0:2] - basket_pos[0:2])
             dist_obj_to_basket_z = np.linalg.norm(obj_pos[2:] - basket_pos[2:])
-            if not grasped and dist_obj_to_robot < 0.03 and dist_obj > 0.0001:
-                grasped = True
+            reward_pick = last_dist_obj_to_robot - dist_obj_to_robot
+            reward_place = last_dist_obj_to_basket - dist_obj_to_basket
+            if not self.grasped1:
+                reward = reward + 20 * reward_pick
+            else:
+                reward = reward + 20 * reward_place
+            if not self.grasped1 and dist_obj_to_robot < 0.05 and dist_obj > 0.0001:
+                self.grasped1 = True
                 reward += 1
-            if dist_obj_to_basket_xy < 0.05 and dist_obj_to_basket_z < 0.155:
+            if dist_obj_to_basket_xy < 0.1 and dist_obj_to_basket_z < 0.22:
                 reward += 1
                 done = True
         elif env_name == 'pick-salad_dressing-and-place-to-alphabet_soup':
-            grasped = False
             obj_pos = state[salad_dressing_dim]
             robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
             basket_pos = state[alphabet_soup_dim]
+            last_basket_pos = last_state[alphabet_soup_dim]
             last_obj_pos = last_state[salad_dressing_dim]
             dist_obj_to_robot = np.linalg.norm(obj_pos - robot_pos)
+            last_dist_obj_to_robot = np.linalg.norm(last_obj_pos - last_robot_pos)
             dist_obj = np.linalg.norm(obj_pos - last_obj_pos)
+            dist_obj_to_basket = np.linalg.norm(obj_pos - basket_pos)
+            last_dist_obj_to_basket = np.linalg.norm(last_obj_pos - last_basket_pos)
             dist_obj_to_basket_xy = np.linalg.norm(obj_pos[0:2] - basket_pos[0:2])
             dist_obj_to_basket_z = np.linalg.norm(obj_pos[2:] - basket_pos[2:])
-            if not grasped and dist_obj_to_robot < 0.03 and dist_obj > 0.0001:
-                grasped = True
+            reward_pick = last_dist_obj_to_robot - dist_obj_to_robot
+            reward_place = last_dist_obj_to_basket - dist_obj_to_basket
+            if not self.grasped1:
+                reward = reward + 20 * reward_pick
+            else:
+                reward = reward + 20 * reward_place
+            if not self.grasped1 and dist_obj_to_robot < 0.05 and dist_obj > 0.0001:
+                self.grasped1 = True
                 reward += 1
-            if dist_obj_to_basket_xy < 0.05 and dist_obj_to_basket_z < 0.155:
+            if dist_obj_to_basket_xy < 0.1 and dist_obj_to_basket_z < 0.22:
                 reward += 1
                 done = True
         elif env_name == 'pick-salad_dressing-and-place-to-cream_cheese':
-            grasped = False
             obj_pos = state[salad_dressing_dim]
             robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
             basket_pos = state[cream_cheese_dim]
+            last_basket_pos = last_state[cream_cheese_dim]
             last_obj_pos = last_state[salad_dressing_dim]
             dist_obj_to_robot = np.linalg.norm(obj_pos - robot_pos)
+            last_dist_obj_to_robot = np.linalg.norm(last_obj_pos - last_robot_pos)
             dist_obj = np.linalg.norm(obj_pos - last_obj_pos)
+            dist_obj_to_basket = np.linalg.norm(obj_pos - basket_pos)
+            last_dist_obj_to_basket = np.linalg.norm(last_obj_pos - last_basket_pos)
             dist_obj_to_basket_xy = np.linalg.norm(obj_pos[0:2] - basket_pos[0:2])
             dist_obj_to_basket_z = np.linalg.norm(obj_pos[2:] - basket_pos[2:])
-            if not grasped and dist_obj_to_robot < 0.03 and dist_obj > 0.0001:
-                grasped = True
+            reward_pick = last_dist_obj_to_robot - dist_obj_to_robot
+            reward_place = last_dist_obj_to_basket - dist_obj_to_basket
+            if not self.grasped1:
+                reward = reward + 20 * reward_pick
+            else:
+                reward = reward + 20 * reward_place
+            if not self.grasped1 and dist_obj_to_robot < 0.05 and dist_obj > 0.0001:
+                self.grasped1 = True
                 reward += 1
-            if dist_obj_to_basket_xy < 0.05 and dist_obj_to_basket_z < 0.155:
+            if dist_obj_to_basket_xy < 0.1 and dist_obj_to_basket_z < 0.22:
                 reward += 1
                 done = True
         elif env_name == 'reach-alphabet_soup':
             obj_pos = state[alphabet_soup_dim]
             robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
+            last_obj_pos = last_state[alphabet_soup_dim]
             dist_obj_to_robot = np.linalg.norm(obj_pos - robot_pos)
-            if dist_obj_to_robot < 0.03:
+            last_dist_obj_to_robot = np.linalg.norm(last_obj_pos - last_robot_pos)
+            reward_dist = last_dist_obj_to_robot - dist_obj_to_robot
+            dist_obj = np.linalg.norm(obj_pos - last_obj_pos)
+            reward += 20 * reward_dist
+            # print(reward, dist_obj_to_robot)
+            if dist_obj_to_robot < 0.05:
                 reward += 1
                 done = True
         elif env_name == 'reach-cream_cheese':
             obj_pos = state[cream_cheese_dim]
             robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
+            last_obj_pos = last_state[cream_cheese_dim]
             dist_obj_to_robot = np.linalg.norm(obj_pos - robot_pos)
-            if dist_obj_to_robot < 0.03:
+            last_dist_obj_to_robot = np.linalg.norm(last_obj_pos - last_robot_pos)
+            reward_dist = last_dist_obj_to_robot - dist_obj_to_robot
+            dist_obj = np.linalg.norm(obj_pos - last_obj_pos)
+            reward += 20 * reward_dist
+            # print(reward, dist_obj_to_robot)
+            if dist_obj_to_robot < 0.05:
                 reward += 1
                 done = True
         elif env_name == 'reach-salad_dressing':
             obj_pos = state[salad_dressing_dim]
             robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
+            last_obj_pos = last_state[salad_dressing_dim]
             dist_obj_to_robot = np.linalg.norm(obj_pos - robot_pos)
-            if dist_obj_to_robot < 0.03:
+            last_dist_obj_to_robot = np.linalg.norm(last_obj_pos - last_robot_pos)
+            reward_dist = last_dist_obj_to_robot - dist_obj_to_robot
+            dist_obj = np.linalg.norm(obj_pos - last_obj_pos)
+            reward += 20 * reward_dist
+            # print(reward, dist_obj_to_robot)
+            if dist_obj_to_robot < 0.05:
                 reward += 1
                 done = True
         elif env_name == 'sequential-pick-and-place-alphabet_soup-and-cream_cheese':
-            grasped1 = False
-            placed1 = False
+
             obj1_pos = state[alphabet_soup_dim]
-            robot_pos = state[robot_dim]
-            basket_pos = state[basket_dim]
             last_obj1_pos = last_state[alphabet_soup_dim]
+            robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
+            basket_pos = state[basket_dim]
+            last_basket_pos = last_state[basket_dim]
             dist_obj1_to_robot = np.linalg.norm(obj1_pos - robot_pos)
+            last_dist_obj1_to_robot = np.linalg.norm(last_obj1_pos - last_robot_pos)
             dist_obj1 = np.linalg.norm(obj1_pos - last_obj1_pos)
+            dist_obj1_to_basket = np.linalg.norm(obj1_pos - basket_pos)
+            last_dist_obj1_to_basket = np.linalg.norm(last_obj1_pos - last_basket_pos)
             dist_obj1_to_basket_xy = np.linalg.norm(obj1_pos[0:2] - basket_pos[0:2])
             dist_obj1_to_basket_z = np.linalg.norm(obj1_pos[2:] - basket_pos[2:])
-            if not grasped1 and dist_obj1_to_robot < 0.03 and dist_obj1 > 0.0001:
-                grasped1 = True
+            reward_pick1 = last_dist_obj1_to_robot - dist_obj1_to_robot
+            reward_place1 = last_dist_obj1_to_basket - dist_obj1_to_basket
+            if not self.grasped1 and dist_obj1_to_robot < 0.05 and dist_obj1 > 0.0001:
+                self.grasped1 = True
                 reward += 1
-            if not placed1 and dist_obj1_to_basket_xy < 0.05 and dist_obj1_to_basket_z < 0.155:
-                placed1 = True
+            if not self.placed1 and dist_obj1_to_basket_xy < 0.14 and dist_obj1_to_basket_z < 0.22:
+                self.placed1 = True
                 reward += 1
-            grasped2 = False
-            placed2 = False
             obj2_pos = state[cream_cheese_dim]
-            robot_pos = state[robot_dim]
-            basket_pos = state[basket_dim]
             last_obj2_pos = last_state[cream_cheese_dim]
+            robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
+            basket_pos = state[basket_dim]
+            last_basket_pos = last_state[basket_dim]
             dist_obj2_to_robot = np.linalg.norm(obj2_pos - robot_pos)
+            last_dist_obj2_to_robot = np.linalg.norm(last_obj2_pos - last_robot_pos)
             dist_obj2 = np.linalg.norm(obj2_pos - last_obj2_pos)
+            dist_obj2_to_basket = np.linalg.norm(obj2_pos - basket_pos)
+            last_dist_obj2_to_basket = np.linalg.norm(last_obj2_pos - last_basket_pos)
             dist_obj2_to_basket_xy = np.linalg.norm(obj2_pos[0:2] - basket_pos[0:2])
             dist_obj2_to_basket_z = np.linalg.norm(obj2_pos[2:] - basket_pos[2:])
-            if not grasped2 and dist_obj2_to_robot < 0.03 and dist_obj2 > 0.0001:
-                grasped2 = True
+            reward_pick2 = last_dist_obj2_to_robot - dist_obj2_to_robot
+            reward_place2 = last_dist_obj2_to_basket - dist_obj2_to_basket
+            if not self.grasped2 and dist_obj2_to_robot < 0.05 and dist_obj2 > 0.0001:
+                self.grasped2 = True
                 reward += 1
-            if not placed2 and dist_obj2_to_basket_xy < 0.05 and dist_obj2_to_basket_z < 0.155:
-                placed2 = True
+            if not self.placed2 and dist_obj2_to_basket_xy < 0.14 and dist_obj2_to_basket_z < 0.22:
+                self.placed2 = True
                 reward += 1
-            if placed1 and placed2:
+            if not self.grasped1:
+                reward += 20 * reward_pick1
+            elif not self.placed1:
+                reward += 20 * reward_place1
+            elif not self.grasped2:
+                reward += 20 * reward_pick2
+            elif not self.placed2:
+                reward += 20 * reward_place2
+            if self.placed1 and self.placed2:
                 done = True
         elif env_name == 'sequential-pick-and-place-alphabet_soup-and-salad_dressing':
-            grasped1 = False
-            placed1 = False
             obj1_pos = state[alphabet_soup_dim]
-            robot_pos = state[robot_dim]
-            basket_pos = state[basket_dim]
             last_obj1_pos = last_state[alphabet_soup_dim]
+            robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
+            basket_pos = state[basket_dim]
+            last_basket_pos = last_state[basket_dim]
             dist_obj1_to_robot = np.linalg.norm(obj1_pos - robot_pos)
+            last_dist_obj1_to_robot = np.linalg.norm(last_obj1_pos - last_robot_pos)
             dist_obj1 = np.linalg.norm(obj1_pos - last_obj1_pos)
+            dist_obj1_to_basket = np.linalg.norm(obj1_pos - basket_pos)
+            last_dist_obj1_to_basket = np.linalg.norm(last_obj1_pos - last_basket_pos)
             dist_obj1_to_basket_xy = np.linalg.norm(obj1_pos[0:2] - basket_pos[0:2])
             dist_obj1_to_basket_z = np.linalg.norm(obj1_pos[2:] - basket_pos[2:])
-            if not grasped1 and dist_obj1_to_robot < 0.03 and dist_obj1 > 0.0001:
-                grasped1 = True
+            reward_pick1 = last_dist_obj1_to_robot - dist_obj1_to_robot
+            reward_place1 = last_dist_obj1_to_basket - dist_obj1_to_basket
+            if not self.grasped1 and dist_obj1_to_robot < 0.05 and dist_obj1 > 0.0001:
+                self.grasped1 = True
                 reward += 1
-            if not placed1 and dist_obj1_to_basket_xy < 0.05 and dist_obj1_to_basket_z < 0.155:
-                placed1 = True
+            if not self.placed1 and dist_obj1_to_basket_xy < 0.14 and dist_obj1_to_basket_z < 0.22:
+                self.placed1 = True
                 reward += 1
-            grasped2 = False
-            placed2 = False
             obj2_pos = state[salad_dressing_dim]
-            robot_pos = state[robot_dim]
-            basket_pos = state[basket_dim]
             last_obj2_pos = last_state[salad_dressing_dim]
+            robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
+            basket_pos = state[basket_dim]
+            last_basket_pos = last_state[basket_dim]
             dist_obj2_to_robot = np.linalg.norm(obj2_pos - robot_pos)
+            last_dist_obj2_to_robot = np.linalg.norm(last_obj2_pos - last_robot_pos)
             dist_obj2 = np.linalg.norm(obj2_pos - last_obj2_pos)
+            dist_obj2_to_basket = np.linalg.norm(obj2_pos - basket_pos)
+            last_dist_obj2_to_basket = np.linalg.norm(last_obj2_pos - last_basket_pos)
             dist_obj2_to_basket_xy = np.linalg.norm(obj2_pos[0:2] - basket_pos[0:2])
             dist_obj2_to_basket_z = np.linalg.norm(obj2_pos[2:] - basket_pos[2:])
-            if not grasped2 and dist_obj2_to_robot < 0.03 and dist_obj2 > 0.0001:
-                grasped2 = True
+            reward_pick2 = last_dist_obj2_to_robot - dist_obj2_to_robot
+            reward_place2 = last_dist_obj2_to_basket - dist_obj2_to_basket
+            if not self.grasped2 and dist_obj2_to_robot < 0.05 and dist_obj2 > 0.0001:
+                self.grasped2 = True
                 reward += 1
-            if not placed2 and dist_obj2_to_basket_xy < 0.05 and dist_obj2_to_basket_z < 0.155:
-                placed2 = True
+            if not self.placed2 and dist_obj2_to_basket_xy < 0.14 and dist_obj2_to_basket_z < 0.22:
+                self.placed2 = True
                 reward += 1
-            if placed1 and placed2:
+            if not self.grasped1:
+                reward += 20 * reward_pick1
+            elif not self.placed1:
+                reward += 20 * reward_place1
+            elif not self.grasped2:
+                reward += 20 * reward_pick2
+            elif not self.placed2:
+                reward += 20 * reward_place2
+            if self.placed1 and self.placed2:
                 done = True
         elif env_name == 'sequential-pick-and-place-cream_cheese-and-alphabet_soup':
-            grasped1 = False
-            placed1 = False
             obj1_pos = state[cream_cheese_dim]
-            robot_pos = state[robot_dim]
-            basket_pos = state[basket_dim]
             last_obj1_pos = last_state[cream_cheese_dim]
+            robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
+            basket_pos = state[basket_dim]
+            last_basket_pos = last_state[basket_dim]
             dist_obj1_to_robot = np.linalg.norm(obj1_pos - robot_pos)
+            last_dist_obj1_to_robot = np.linalg.norm(last_obj1_pos - last_robot_pos)
             dist_obj1 = np.linalg.norm(obj1_pos - last_obj1_pos)
+            dist_obj1_to_basket = np.linalg.norm(obj1_pos - basket_pos)
+            last_dist_obj1_to_basket = np.linalg.norm(last_obj1_pos - last_basket_pos)
             dist_obj1_to_basket_xy = np.linalg.norm(obj1_pos[0:2] - basket_pos[0:2])
             dist_obj1_to_basket_z = np.linalg.norm(obj1_pos[2:] - basket_pos[2:])
-            if not grasped1 and dist_obj1_to_robot < 0.03 and dist_obj1 > 0.0001:
-                grasped1 = True
+            reward_pick1 = last_dist_obj1_to_robot - dist_obj1_to_robot
+            reward_place1 = last_dist_obj1_to_basket - dist_obj1_to_basket
+            if not self.grasped1 and dist_obj1_to_robot < 0.05 and dist_obj1 > 0.0001:
+                self.grasped1 = True
                 reward += 1
-            if not placed1 and dist_obj1_to_basket_xy < 0.05 and dist_obj1_to_basket_z < 0.155:
-                placed1 = True
+            if not self.placed1 and dist_obj1_to_basket_xy < 0.14 and dist_obj1_to_basket_z < 0.22:
+                self.placed1 = True
                 reward += 1
-            grasped2 = False
-            placed2 = False
             obj2_pos = state[alphabet_soup_dim]
-            robot_pos = state[robot_dim]
-            basket_pos = state[basket_dim]
             last_obj2_pos = last_state[alphabet_soup_dim]
+            robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
+            basket_pos = state[basket_dim]
+            last_basket_pos = last_state[basket_dim]
             dist_obj2_to_robot = np.linalg.norm(obj2_pos - robot_pos)
+            last_dist_obj2_to_robot = np.linalg.norm(last_obj2_pos - last_robot_pos)
             dist_obj2 = np.linalg.norm(obj2_pos - last_obj2_pos)
+            dist_obj2_to_basket = np.linalg.norm(obj2_pos - basket_pos)
+            last_dist_obj2_to_basket = np.linalg.norm(last_obj2_pos - last_basket_pos)
             dist_obj2_to_basket_xy = np.linalg.norm(obj2_pos[0:2] - basket_pos[0:2])
             dist_obj2_to_basket_z = np.linalg.norm(obj2_pos[2:] - basket_pos[2:])
-            if not grasped2 and dist_obj2_to_robot < 0.03 and dist_obj2 > 0.0001:
-                grasped2 = True
+            reward_pick2 = last_dist_obj2_to_robot - dist_obj2_to_robot
+            reward_place2 = last_dist_obj2_to_basket - dist_obj2_to_basket
+            if not self.grasped2 and dist_obj2_to_robot < 0.05 and dist_obj2 > 0.0001:
+                self.grasped2 = True
                 reward += 1
-            if not placed2 and dist_obj2_to_basket_xy < 0.05 and dist_obj2_to_basket_z < 0.155:
-                placed2 = True
+            if not self.placed2 and dist_obj2_to_basket_xy < 0.14 and dist_obj2_to_basket_z < 0.22:
+                self.placed2 = True
                 reward += 1
-            if placed1 and placed2:
+            if not self.grasped1:
+                reward += 20 * reward_pick1
+            elif not self.placed1:
+                reward += 20 * reward_place1
+            elif not self.grasped2:
+                reward += 20 * reward_pick2
+            elif not self.placed2:
+                reward += 20 * reward_place2
+            if self.placed1 and self.placed2:
                 done = True
         elif env_name == 'sequential-pick-and-place-cream_cheese-and-salad_dressing':
-            grasped1 = False
-            placed1 = False
             obj1_pos = state[cream_cheese_dim]
-            robot_pos = state[robot_dim]
-            basket_pos = state[basket_dim]
             last_obj1_pos = last_state[cream_cheese_dim]
+            robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
+            basket_pos = state[basket_dim]
+            last_basket_pos = last_state[basket_dim]
             dist_obj1_to_robot = np.linalg.norm(obj1_pos - robot_pos)
+            last_dist_obj1_to_robot = np.linalg.norm(last_obj1_pos - last_robot_pos)
             dist_obj1 = np.linalg.norm(obj1_pos - last_obj1_pos)
+            dist_obj1_to_basket = np.linalg.norm(obj1_pos - basket_pos)
+            last_dist_obj1_to_basket = np.linalg.norm(last_obj1_pos - last_basket_pos)
             dist_obj1_to_basket_xy = np.linalg.norm(obj1_pos[0:2] - basket_pos[0:2])
             dist_obj1_to_basket_z = np.linalg.norm(obj1_pos[2:] - basket_pos[2:])
-            if not grasped1 and dist_obj1_to_robot < 0.03 and dist_obj1 > 0.0001:
-                grasped1 = True
+            reward_pick1 = last_dist_obj1_to_robot - dist_obj1_to_robot
+            reward_place1 = last_dist_obj1_to_basket - dist_obj1_to_basket
+            if not self.grasped1 and dist_obj1_to_robot < 0.05 and dist_obj1 > 0.0001:
+                self.grasped1 = True
                 reward += 1
-            if not placed1 and dist_obj1_to_basket_xy < 0.05 and dist_obj1_to_basket_z < 0.155:
-                placed1 = True
+            if not self.placed1 and dist_obj1_to_basket_xy < 0.14 and dist_obj1_to_basket_z < 0.22:
+                self.placed1 = True
                 reward += 1
-            grasped2 = False
-            placed2 = False
             obj2_pos = state[salad_dressing_dim]
-            robot_pos = state[robot_dim]
-            basket_pos = state[basket_dim]
             last_obj2_pos = last_state[salad_dressing_dim]
+            robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
+            basket_pos = state[basket_dim]
+            last_basket_pos = last_state[basket_dim]
             dist_obj2_to_robot = np.linalg.norm(obj2_pos - robot_pos)
+            last_dist_obj2_to_robot = np.linalg.norm(last_obj2_pos - last_robot_pos)
             dist_obj2 = np.linalg.norm(obj2_pos - last_obj2_pos)
+            dist_obj2_to_basket = np.linalg.norm(obj2_pos - basket_pos)
+            last_dist_obj2_to_basket = np.linalg.norm(last_obj2_pos - last_basket_pos)
             dist_obj2_to_basket_xy = np.linalg.norm(obj2_pos[0:2] - basket_pos[0:2])
             dist_obj2_to_basket_z = np.linalg.norm(obj2_pos[2:] - basket_pos[2:])
-            if not grasped2 and dist_obj2_to_robot < 0.03 and dist_obj2 > 0.0001:
-                grasped2 = True
+            reward_pick2 = last_dist_obj2_to_robot - dist_obj2_to_robot
+            reward_place2 = last_dist_obj2_to_basket - dist_obj2_to_basket
+            if not self.grasped2 and dist_obj2_to_robot < 0.05 and dist_obj2 > 0.0001:
+                self.grasped2 = True
                 reward += 1
-            if not placed2 and dist_obj2_to_basket_xy < 0.05 and dist_obj2_to_basket_z < 0.155:
-                placed2 = True
+            if not self.placed2 and dist_obj2_to_basket_xy < 0.14 and dist_obj2_to_basket_z < 0.22:
+                self.placed2 = True
                 reward += 1
-            if placed1 and placed2:
+            if not self.grasped1:
+                reward += 20 * reward_pick1
+            elif not self.placed1:
+                reward += 20 * reward_place1
+            elif not self.grasped2:
+                reward += 20 * reward_pick2
+            elif not self.placed2:
+                reward += 20 * reward_place2
+            if self.placed1 and self.placed2:
                 done = True
         elif env_name == 'sequential-pick-and-place-salad_dressing-and-alphabet_soup':
-            grasped1 = False
-            placed1 = False
             obj1_pos = state[salad_dressing_dim]
-            robot_pos = state[robot_dim]
-            basket_pos = state[basket_dim]
             last_obj1_pos = last_state[salad_dressing_dim]
+            robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
+            basket_pos = state[basket_dim]
+            last_basket_pos = last_state[basket_dim]
             dist_obj1_to_robot = np.linalg.norm(obj1_pos - robot_pos)
+            last_dist_obj1_to_robot = np.linalg.norm(last_obj1_pos - last_robot_pos)
             dist_obj1 = np.linalg.norm(obj1_pos - last_obj1_pos)
+            dist_obj1_to_basket = np.linalg.norm(obj1_pos - basket_pos)
+            last_dist_obj1_to_basket = np.linalg.norm(last_obj1_pos - last_basket_pos)
             dist_obj1_to_basket_xy = np.linalg.norm(obj1_pos[0:2] - basket_pos[0:2])
             dist_obj1_to_basket_z = np.linalg.norm(obj1_pos[2:] - basket_pos[2:])
-            if not grasped1 and dist_obj1_to_robot < 0.03 and dist_obj1 > 0.0001:
-                grasped1 = True
+            reward_pick1 = last_dist_obj1_to_robot - dist_obj1_to_robot
+            reward_place1 = last_dist_obj1_to_basket - dist_obj1_to_basket
+            if not self.grasped1 and dist_obj1_to_robot < 0.05 and dist_obj1 > 0.0001:
+                self.grasped1 = True
                 reward += 1
-            if not placed1 and dist_obj1_to_basket_xy < 0.05 and dist_obj1_to_basket_z < 0.155:
-                placed1 = True
+            if not self.placed1 and dist_obj1_to_basket_xy < 0.14 and dist_obj1_to_basket_z < 0.22:
+                self.placed1 = True
                 reward += 1
-            grasped2 = False
-            placed2 = False
             obj2_pos = state[alphabet_soup_dim]
-            robot_pos = state[robot_dim]
-            basket_pos = state[basket_dim]
             last_obj2_pos = last_state[alphabet_soup_dim]
+            robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
+            basket_pos = state[basket_dim]
+            last_basket_pos = last_state[basket_dim]
             dist_obj2_to_robot = np.linalg.norm(obj2_pos - robot_pos)
+            last_dist_obj2_to_robot = np.linalg.norm(last_obj2_pos - last_robot_pos)
             dist_obj2 = np.linalg.norm(obj2_pos - last_obj2_pos)
+            dist_obj2_to_basket = np.linalg.norm(obj2_pos - basket_pos)
+            last_dist_obj2_to_basket = np.linalg.norm(last_obj2_pos - last_basket_pos)
             dist_obj2_to_basket_xy = np.linalg.norm(obj2_pos[0:2] - basket_pos[0:2])
             dist_obj2_to_basket_z = np.linalg.norm(obj2_pos[2:] - basket_pos[2:])
-            if not grasped2 and dist_obj2_to_robot < 0.03 and dist_obj2 > 0.0001:
-                grasped2 = True
+            reward_pick2 = last_dist_obj2_to_robot - dist_obj2_to_robot
+            reward_place2 = last_dist_obj2_to_basket - dist_obj2_to_basket
+            if not self.grasped2 and dist_obj2_to_robot < 0.05 and dist_obj2 > 0.0001:
+                self.grasped2 = True
                 reward += 1
-            if not placed2 and dist_obj2_to_basket_xy < 0.05 and dist_obj2_to_basket_z < 0.155:
-                placed2 = True
+            if not self.placed2 and dist_obj2_to_basket_xy < 0.14 and dist_obj2_to_basket_z < 0.22:
+                self.placed2 = True
                 reward += 1
-            if placed1 and placed2:
+            if not self.grasped1:
+                reward += 20 * reward_pick1
+            elif not self.placed1:
+                reward += 20 * reward_place1
+            elif not self.grasped2:
+                reward += 20 * reward_pick2
+            elif not self.placed2:
+                reward += 20 * reward_place2
+            if self.placed1 and self.placed2:
                 done = True
         elif env_name == 'sequential-pick-and-place-salad_dressing-and-cream_cheese':
-            grasped1 = False
-            placed1 = False
             obj1_pos = state[salad_dressing_dim]
-            robot_pos = state[robot_dim]
-            basket_pos = state[basket_dim]
             last_obj1_pos = last_state[salad_dressing_dim]
+            robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
+            basket_pos = state[basket_dim]
+            last_basket_pos = last_state[basket_dim]
             dist_obj1_to_robot = np.linalg.norm(obj1_pos - robot_pos)
+            last_dist_obj1_to_robot = np.linalg.norm(last_obj1_pos - last_robot_pos)
             dist_obj1 = np.linalg.norm(obj1_pos - last_obj1_pos)
+            dist_obj1_to_basket = np.linalg.norm(obj1_pos - basket_pos)
+            last_dist_obj1_to_basket = np.linalg.norm(last_obj1_pos - last_basket_pos)
             dist_obj1_to_basket_xy = np.linalg.norm(obj1_pos[0:2] - basket_pos[0:2])
             dist_obj1_to_basket_z = np.linalg.norm(obj1_pos[2:] - basket_pos[2:])
-            if not grasped1 and dist_obj1_to_robot < 0.03 and dist_obj1 > 0.0001:
-                grasped1 = True
+            reward_pick1 = last_dist_obj1_to_robot - dist_obj1_to_robot
+            reward_place1 = last_dist_obj1_to_basket - dist_obj1_to_basket
+            if not self.grasped1 and dist_obj1_to_robot < 0.05 and dist_obj1 > 0.0001:
+                self.grasped1 = True
                 reward += 1
-            if not placed1 and dist_obj1_to_basket_xy < 0.05 and dist_obj1_to_basket_z < 0.155:
-                placed1 = True
+            if not self.placed1 and dist_obj1_to_basket_xy < 0.14 and dist_obj1_to_basket_z < 0.22:
+                self.placed1 = True
                 reward += 1
-            grasped2 = False
-            placed2 = False
             obj2_pos = state[cream_cheese_dim]
-            robot_pos = state[robot_dim]
-            basket_pos = state[basket_dim]
             last_obj2_pos = last_state[cream_cheese_dim]
+            robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
+            basket_pos = state[basket_dim]
+            last_basket_pos = last_state[basket_dim]
             dist_obj2_to_robot = np.linalg.norm(obj2_pos - robot_pos)
+            last_dist_obj2_to_robot = np.linalg.norm(last_obj2_pos - last_robot_pos)
             dist_obj2 = np.linalg.norm(obj2_pos - last_obj2_pos)
+            dist_obj2_to_basket = np.linalg.norm(obj2_pos - basket_pos)
+            last_dist_obj2_to_basket = np.linalg.norm(last_obj2_pos - last_basket_pos)
             dist_obj2_to_basket_xy = np.linalg.norm(obj2_pos[0:2] - basket_pos[0:2])
             dist_obj2_to_basket_z = np.linalg.norm(obj2_pos[2:] - basket_pos[2:])
-            if not grasped2 and dist_obj2_to_robot < 0.03 and dist_obj2 > 0.0001:
-                grasped2 = True
+            reward_pick2 = last_dist_obj2_to_robot - dist_obj2_to_robot
+            reward_place2 = last_dist_obj2_to_basket - dist_obj2_to_basket
+            if not self.grasped2 and dist_obj2_to_robot < 0.05 and dist_obj2 > 0.0001:
+                self.grasped2 = True
                 reward += 1
-            if not placed2 and dist_obj2_to_basket_xy < 0.05 and dist_obj2_to_basket_z < 0.155:
-                placed2 = True
+            if not self.placed2 and dist_obj2_to_basket_xy < 0.14 and dist_obj2_to_basket_z < 0.22:
+                self.placed2 = True
                 reward += 1
-            if placed1 and placed2:
+            if not self.grasped1:
+                reward += 20 * reward_pick1
+            elif not self.placed1:
+                reward += 20 * reward_place1
+            elif not self.grasped2:
+                reward += 20 * reward_pick2
+            elif not self.placed2:
+                reward += 20 * reward_place2
+            if self.placed1 and self.placed2:
                 done = True
         elif env_name == 'pick-and-place-aside-alphabet_soup':
-            grasped = False
             obj_pos = state[alphabet_soup_dim]
-            robot_pos = state[robot_dim]
             last_obj_pos = last_state[alphabet_soup_dim]
+            robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
             dist_obj_to_robot = np.linalg.norm(obj_pos - robot_pos)
+            last_dist_obj_to_robot = np.linalg.norm(last_obj_pos - last_robot_pos)
             dist_obj = np.linalg.norm(obj_pos - last_obj_pos)
-            dist_obj_to_o = np.linalg.norm(obj_pos - np.array([0.0, 0.0, 0.0]))
-            if not grasped and dist_obj_to_robot < 0.03 and dist_obj > 0.0001:
-                grasped = True
+            dist_obj_to_init = np.linalg.norm(obj_pos - self.init_state[alphabet_soup_dim])
+            last_dist_obj_to_init = np.linalg.norm(last_obj_pos - self.init_state[alphabet_soup_dim])
+            reward_pick = last_dist_obj_to_robot - dist_obj_to_robot
+            reward_place = - last_dist_obj_to_init + dist_obj_to_init
+            if not self.grasped1 and dist_obj_to_robot < 0.05 and dist_obj > 0.0001:
+                self.grasped1 = True
                 reward += 1
-            if dist_obj_to_o < 0.03:
+            if not self.grasped1:
+                reward = reward + 20 * reward_pick
+            else:
+                reward = reward + 20 * reward_place
+            if dist_obj_to_init > 0.07:
                 reward += 1
                 done = True
         elif env_name == 'pick-and-place-aside-cream_cheese':
-            grasped = False
             obj_pos = state[cream_cheese_dim]
-            robot_pos = state[robot_dim]
             last_obj_pos = last_state[cream_cheese_dim]
+            robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
             dist_obj_to_robot = np.linalg.norm(obj_pos - robot_pos)
+            last_dist_obj_to_robot = np.linalg.norm(last_obj_pos - last_robot_pos)
             dist_obj = np.linalg.norm(obj_pos - last_obj_pos)
-            dist_obj_to_o = np.linalg.norm(obj_pos - np.array([0.0, 0.0, 0.0]))
-            if not grasped and dist_obj_to_robot < 0.03 and dist_obj > 0.0001:
-                grasped = True
+            dist_obj_to_init = np.linalg.norm(obj_pos - self.init_state[cream_cheese_dim])
+            last_dist_obj_to_init = np.linalg.norm(last_obj_pos - self.init_state[cream_cheese_dim])
+            reward_pick = last_dist_obj_to_robot - dist_obj_to_robot
+            reward_place = - last_dist_obj_to_init + dist_obj_to_init
+            if not self.grasped1 and dist_obj_to_robot < 0.05 and dist_obj > 0.0001:
+                self.grasped1 = True
                 reward += 1
-            if dist_obj_to_o < 0.03:
+            if not self.grasped1:
+                reward = reward + 20 * reward_pick
+            else:
+                reward = reward + 20 * reward_place
+            if dist_obj_to_init > 0.07:
                 reward += 1
                 done = True
+            #print(dist_obj_to_init)
         elif env_name == 'pick-and-place-aside-salad_dressing':
-            grasped = False
             obj_pos = state[salad_dressing_dim]
-            robot_pos = state[robot_dim]
             last_obj_pos = last_state[salad_dressing_dim]
+            robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
             dist_obj_to_robot = np.linalg.norm(obj_pos - robot_pos)
+            last_dist_obj_to_robot = np.linalg.norm(last_obj_pos - last_robot_pos)
             dist_obj = np.linalg.norm(obj_pos - last_obj_pos)
-            dist_obj_to_o = np.linalg.norm(obj_pos - np.array([0.0, 0.0, 0.0]))
-            if not grasped and dist_obj_to_robot < 0.03 and dist_obj > 0.0001:
-                grasped = True
+            dist_obj_to_init = np.linalg.norm(obj_pos - self.init_state[salad_dressing_dim])
+            last_dist_obj_to_init = np.linalg.norm(last_obj_pos - self.init_state[salad_dressing_dim])
+            reward_pick = last_dist_obj_to_robot - dist_obj_to_robot
+            reward_place = - last_dist_obj_to_init + dist_obj_to_init
+            if not self.grasped1 and dist_obj_to_robot < 0.05 and dist_obj > 0.0001:
+                self.grasped1 = True
                 reward += 1
-            if dist_obj_to_o < 0.03:
+            if not self.grasped1:
+                reward = reward + 20 * reward_pick
+            else:
+                reward = reward + 20 * reward_place
+            if dist_obj_to_init > 0.07:
                 reward += 1
                 done = True
         elif env_name == 'sequential-pick-and-place-all':
-            grasped1 = False
-            placed1 = False
             obj1_pos = state[alphabet_soup_dim]
-            robot_pos = state[robot_dim]
-            basket_pos = state[basket_dim]
             last_obj1_pos = last_state[alphabet_soup_dim]
+            robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
+            basket_pos = state[basket_dim]
+            last_basket_pos = last_state[basket_dim]
             dist_obj1_to_robot = np.linalg.norm(obj1_pos - robot_pos)
+            last_dist_obj1_to_robot = np.linalg.norm(last_obj1_pos - last_robot_pos)
             dist_obj1 = np.linalg.norm(obj1_pos - last_obj1_pos)
+            dist_obj1_to_basket = np.linalg.norm(obj1_pos - basket_pos)
+            last_dist_obj1_to_basket = np.linalg.norm(last_obj1_pos - last_basket_pos)
             dist_obj1_to_basket_xy = np.linalg.norm(obj1_pos[0:2] - basket_pos[0:2])
             dist_obj1_to_basket_z = np.linalg.norm(obj1_pos[2:] - basket_pos[2:])
-            if not grasped1 and dist_obj1_to_robot < 0.03 and dist_obj1 > 0.0001:
-                grasped1 = True
+            reward_pick1 = last_dist_obj1_to_robot - dist_obj1_to_robot
+            reward_place1 = last_dist_obj1_to_basket - dist_obj1_to_basket
+            if not self.grasped1 and dist_obj1_to_robot < 0.05 and dist_obj1 > 0.0001:
+                self.grasped1 = True
                 reward += 1
-            if not placed1 and dist_obj1_to_basket_xy < 0.05 and dist_obj1_to_basket_z < 0.155:
-                placed1 = True
+            if not self.placed1 and dist_obj1_to_basket_xy < 0.14 and dist_obj1_to_basket_z < 0.22:
+                self.placed1 = True
                 reward += 1
-            grasped2 = False
-            placed2 = False
             obj2_pos = state[cream_cheese_dim]
-            robot_pos = state[robot_dim]
-            basket_pos = state[basket_dim]
             last_obj2_pos = last_state[cream_cheese_dim]
+            robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
+            basket_pos = state[basket_dim]
+            last_basket_pos = last_state[basket_dim]
             dist_obj2_to_robot = np.linalg.norm(obj2_pos - robot_pos)
+            last_dist_obj2_to_robot = np.linalg.norm(last_obj2_pos - last_robot_pos)
             dist_obj2 = np.linalg.norm(obj2_pos - last_obj2_pos)
+            dist_obj2_to_basket = np.linalg.norm(obj2_pos - basket_pos)
+            last_dist_obj2_to_basket = np.linalg.norm(last_obj2_pos - last_basket_pos)
             dist_obj2_to_basket_xy = np.linalg.norm(obj2_pos[0:2] - basket_pos[0:2])
             dist_obj2_to_basket_z = np.linalg.norm(obj2_pos[2:] - basket_pos[2:])
-            if not grasped2 and dist_obj2_to_robot < 0.03 and dist_obj2 > 0.0001:
-                grasped2 = True
+            reward_pick2 = last_dist_obj2_to_robot - dist_obj2_to_robot
+            reward_place2 = last_dist_obj2_to_basket - dist_obj2_to_basket
+            if not self.grasped2 and dist_obj2_to_robot < 0.05 and dist_obj2 > 0.0001:
+                self.grasped2 = True
                 reward += 1
-            if not placed2 and dist_obj2_to_basket_xy < 0.05 and dist_obj2_to_basket_z < 0.155:
-                placed2 = True
+            if not self.placed2 and dist_obj2_to_basket_xy < 0.14 and dist_obj2_to_basket_z < 0.22:
+                self.placed2 = True
                 reward += 1
-            grasped3 = False
-            placed3 = False
-            obj3_pos = state[salad_dressing_dim]
+            obj3_pos = state[cream_cheese_dim]
+            last_obj3_pos = last_state[cream_cheese_dim]
             robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
             basket_pos = state[basket_dim]
-            last_obj3_pos = last_state[salad_dressing_dim]
+            last_basket_pos = last_state[basket_dim]
             dist_obj3_to_robot = np.linalg.norm(obj3_pos - robot_pos)
+            last_dist_obj3_to_robot = np.linalg.norm(last_obj3_pos - last_robot_pos)
             dist_obj3 = np.linalg.norm(obj3_pos - last_obj3_pos)
+            dist_obj3_to_basket = np.linalg.norm(obj3_pos - basket_pos)
+            last_dist_obj3_to_basket = np.linalg.norm(last_obj3_pos - last_basket_pos)
             dist_obj3_to_basket_xy = np.linalg.norm(obj3_pos[0:2] - basket_pos[0:2])
             dist_obj3_to_basket_z = np.linalg.norm(obj3_pos[2:] - basket_pos[2:])
-            if not grasped3 and dist_obj3_to_robot < 0.03 and dist_obj3 > 0.0001:
-                grasped3 = True
+            reward_pick3 = last_dist_obj3_to_robot - dist_obj3_to_robot
+            reward_place3 = last_dist_obj3_to_basket - dist_obj3_to_basket
+            if not self.grasped3 and dist_obj3_to_robot < 0.05 and dist_obj3 > 0.0001:
+                self.grasped3 = True
                 reward += 1
-            if not placed3 and dist_obj3_to_basket_xy < 0.05 and dist_obj3_to_basket_z < 0.155:
-                placed3 = True
+            if not self.placed3 and dist_obj3_to_basket_xy < 0.14 and dist_obj3_to_basket_z < 0.22:
+                self.placed3 = True
                 reward += 1
-            if placed1 and placed2 and placed3:
+            if not self.grasped1:
+                reward += 20 * reward_pick1
+            elif not self.placed1:
+                reward += 20 * reward_place1
+            elif not self.grasped2:
+                reward += 20 * reward_pick2
+            elif not self.placed2:
+                reward += 20 * reward_place2
+            elif not self.grasped3:
+                reward += 20 * reward_pick3
+            elif not self.placed3:
+                reward += 20 * reward_place3
+            if self.placed1 and self.placed2 and self.placed3:
                 done = True
         elif env_name == 'pick-out-of-alphabet_soup':
-            grasped = False
             obj_pos = state[alphabet_soup_dim]
-            robot_pos = state[robot_dim]
-            basket_pos = state[basket_dim]
             last_obj_pos = last_state[alphabet_soup_dim]
+            robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
+            basket_pos = state[basket_dim]
+            last_basket_pos = last_state[basket_dim]
             dist_obj_to_robot = np.linalg.norm(obj_pos - robot_pos)
+            last_dist_obj_to_robot = np.linalg.norm(last_obj_pos - last_robot_pos)
             dist_obj = np.linalg.norm(obj_pos - last_obj_pos)
             dist_obj_to_basket = np.linalg.norm(obj_pos - basket_pos)
-            if not grasped and dist_obj_to_robot < 0.03 and dist_obj > 0.0001:
-                grasped = True
+            last_dist_obj_to_basket = np.linalg.norm(last_obj_pos - last_basket_pos)
+            reward_pick = last_dist_obj_to_robot - dist_obj_to_robot
+            reward_place = dist_obj_to_basket - last_dist_obj_to_basket
+            if not self.grasped1 and dist_obj_to_robot < 0.05 and dist_obj > 0.0001:
+                self.grasped1 = True
                 reward += 1
-            if dist_obj_to_basket > 0.3:
+            if not self.grasped1:
+                reward = reward + 20 * reward_pick
+            else:
+                reward = reward + 20 * reward_place
+            if dist_obj_to_basket > 0.45:
                 reward += 1
                 done = True
         elif env_name == 'pick-out-of-cream_cheese':
-            grasped = False
             obj_pos = state[cream_cheese_dim]
-            robot_pos = state[robot_dim]
-            basket_pos = state[basket_dim]
             last_obj_pos = last_state[cream_cheese_dim]
+            robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
+            basket_pos = state[basket_dim]
+            last_basket_pos = last_state[basket_dim]
             dist_obj_to_robot = np.linalg.norm(obj_pos - robot_pos)
+            last_dist_obj_to_robot = np.linalg.norm(last_obj_pos - last_robot_pos)
             dist_obj = np.linalg.norm(obj_pos - last_obj_pos)
             dist_obj_to_basket = np.linalg.norm(obj_pos - basket_pos)
-            if not grasped and dist_obj_to_robot < 0.03 and dist_obj > 0.0001:
-                grasped = True
+            last_dist_obj_to_basket = np.linalg.norm(last_obj_pos - last_basket_pos)
+            reward_pick = last_dist_obj_to_robot - dist_obj_to_robot
+            reward_place = dist_obj_to_basket - last_dist_obj_to_basket
+            if not self.grasped1 and dist_obj_to_robot < 0.05 and dist_obj > 0.0001:
+                self.grasped1 = True
                 reward += 1
-            if dist_obj_to_basket > 0.3:
+            if not self.grasped1:
+                reward = reward + 20 * reward_pick
+            else:
+                reward = reward + 20 * reward_place
+            if dist_obj_to_basket > 0.35:
                 reward += 1
                 done = True
         elif env_name == 'pick-out-of-salad_dressing':
-            grasped = False
             obj_pos = state[salad_dressing_dim]
-            robot_pos = state[robot_dim]
-            basket_pos = state[basket_dim]
             last_obj_pos = last_state[salad_dressing_dim]
+            robot_pos = state[robot_dim]
+            last_robot_pos = last_state[robot_dim]
+            basket_pos = state[basket_dim]
+            last_basket_pos = last_state[basket_dim]
             dist_obj_to_robot = np.linalg.norm(obj_pos - robot_pos)
+            last_dist_obj_to_robot = np.linalg.norm(last_obj_pos - last_robot_pos)
             dist_obj = np.linalg.norm(obj_pos - last_obj_pos)
             dist_obj_to_basket = np.linalg.norm(obj_pos - basket_pos)
-            if not grasped and dist_obj_to_robot < 0.03 and dist_obj > 0.0001:
-                grasped = True
+            last_dist_obj_to_basket = np.linalg.norm(last_obj_pos - last_basket_pos)
+            reward_pick = last_dist_obj_to_robot - dist_obj_to_robot
+            reward_place = dist_obj_to_basket - last_dist_obj_to_basket
+            if not self.grasped1 and dist_obj_to_robot < 0.05 and dist_obj > 0.0001:
+                self.grasped1 = True
                 reward += 1
-            if dist_obj_to_basket > 0.3:
+            if not self.grasped1:
+                reward = reward + 20 * reward_pick
+            else:
+                reward = reward + 20 * reward_place
+            if dist_obj_to_basket > 0.4:
                 reward += 1
                 done = True
+            # print(dist_obj_to_basket)
         else:
             raise ValueError(f"can't find {env_name} instructions")
         return reward, done
 
-if __name__ == "__main__":
-    env_name = 'place-salad_dressing'
-    env = VectorLibero(env_name)
+class RIMAROEnv:
+    action_space: spaces.Box = None
+    
+    def __init__(self, **kwargs):
+        raise NotImplementedError
+
+    def reset(self, **kwargs):
+        raise NotImplementedError
+
+    def step(self, action):
+        raise NotImplementedError
+        
+    def init_dataset(self):
+        raise NotImplementedError
+
+    def get_dataset(self, **kwargs):
+        raise NotImplementedError
+    
+    def get_instruction(self):
+        raise NotImplementedError
+
+class LiberoEnv(RIMAROEnv):
+    def __init__(self, **kwargs):
+        # self.dataset_url_dict = kwargs['dataset_url_dict']
+
+        self.level = kwargs['level']
+        true_level = level2true_level[self.level]
+        if true_level == 'baseline':
+            self.env_name_list = baseline_env_name_list.copy()
+        elif true_level == 'rephrase_level':
+            self.env_name_list = rephrase_level_env_name_list.copy()
+        elif true_level == 'easy_level':
+            self.env_name_list = easy_level_env_name_list.copy()
+        elif true_level == 'hard_level':
+            self.env_name_list = hard_level_env_name_list.copy()
+        else:
+            raise NotImplementedError
+        # 一个level对应多个env
+        self.env_list = []
+        for env_name in self.env_name_list:
+            eval_env = VectorLibero(env_name)
+            self.env_list.append(eval_env)
+        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(44,), dtype=np.float32)
+        self.action_space = spaces.Box(low=-1, high=1, shape=(7,), dtype=np.float32)
+        
+        self.ptr = None
+        self.path_dict = {}
+        self.path_dict['real'] = 'data/libero/baseline.npy'
+        self.path_dict['rephrase'] = 'data/libero/rephrase.npy'
+        self.path_dict['easy'] = 'data/libero/easy.npy'
+        self.path_dict['hard'] = 'data/libero/hard.npy'
+
+    def render(self, **kwargs):
+        curr_env = self.env_list[self.ptr]
+        return curr_env.render(**kwargs)
+
+    def reset(self, **kwargs):
+        if self.ptr is None:
+            self.ptr = 0
+        else:
+            self.ptr = (self.ptr + 1) % len(self.env_list)
+        curr_env = self.env_list[self.ptr]
+        obs = curr_env.reset(**kwargs)
+        return obs
+    
+    def step(self, action):
+        curr_env = self.env_list[self.ptr]
+        return curr_env.step(action)
+
+    def get_dataset(self, level='rephrase'):
+        self.level = level
+
+        # if 'real' not in self.path_dict.keys():
+        #     self.path_dict['real'] = download_dataset_from_url(self.dataset_url_dict['real'])
+        real_dataset_path = self.path_dict['real']
+        np_data = np.load(real_dataset_path, allow_pickle=True).item()
+        real_dataset = {
+                'masks': np_data['masks'][:],
+                'observations': np_data['observations'][:],
+                'actions': np_data['actions'][:],
+                'rewards': np_data['rewards'][:],
+            }
+        
+        # if self.level not in self.path_dict.keys():
+        #     self.path_dict[self.level] = download_dataset_from_url(self.dataset_url_dict[self.level])
+        imaginary_level_dataset_path = self.path_dict[self.level]
+        np_data = np.load(imaginary_level_dataset_path, allow_pickle=True).item()
+        imaginary_level_dataset = {
+            'masks': np_data['masks'][:],
+            'observations': np_data['observations'][:],
+            'actions': np_data['actions'][:],
+            'rewards': np_data['rewards'][:],
+        }
+
+        return real_dataset, imaginary_level_dataset
+    
+if __name__ == '__main__':
+    # env = VectorLibero("pick-and-place-aside-alphabet_soup")
+    # env.reset()
+    # for i in range(100):
+    #     action = np.random.rand(7)
+    #     obs, reward, done, info = env.step(action)
+    #     print(obs, reward, done, info)
+    #     if done:
+    #         break
+    env = LiberoEnv(level='real')
+    env.get_dataset(level='real')
     env.reset()
-    done = False
-    while not done:
-        dummy_action = [0.] * 7
-        state, reward, terminated, truncated, info = env.step(dummy_action)
-        print(state.shape)
-    # env, img = make_libero_env(env_name)
-    # env = VectorLibero(env, env_name)
-    # state, img = env.reset()
-    # # plt.imshow(img[::-1, :, :])
-    # # plt.axis("off")  # Turn off axes for a cleaner image
-    # # plt.savefig("test_image2.png", bbox_inches="tight")
-    # dummy_action = [0.] * 7
-    # state, reward, done, info = env.step(dummy_action)
-    # print(state)
-    # env.env.close()
+    for i in range(100):
+        action = np.random.rand(7)
+        obs, reward, done, info = env.step(action)
+        print(obs, reward, done, info)
+        if done:
+            break

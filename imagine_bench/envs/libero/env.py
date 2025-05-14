@@ -1670,7 +1670,7 @@ if __name__ == '__main__':
     #     if done:
     #         break
     env = LiberoEnv(level='real')
-    env.get_dataset(level='real')
+    # env.get_dataset(level='real')
     env.reset()
     for i in range(100):
         action = np.random.rand(7)

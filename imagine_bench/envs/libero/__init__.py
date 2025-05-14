@@ -11,6 +11,7 @@ import cv2
 import imageio
 import torch
 import torchvision
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 from envs.libero.env import level2true_level, baseline_env_name_list, rephrase_level_env_name_list, easy_level_env_name_list, hard_level_env_name_list, VectorLibero
 from envs import RIMAROEnv, LEVEL_LIST, download_dataset_from_url
 
@@ -35,7 +36,7 @@ class LiberoEnv(RIMAROEnv):
         for env_name in self.env_name_list:
             eval_env = VectorLibero(env_name)
             self.env_list.append(eval_env)
-        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(44,), dtype=np.float32)
+        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(44 + 768,), dtype=np.float32)
         self.action_space = spaces.Box(low=-1, high=1, shape=(7,), dtype=np.float32)
         
         self.ptr = None
@@ -44,19 +45,23 @@ class LiberoEnv(RIMAROEnv):
         # self.path_dict['rephrase'] = 'rimro/envs/data/libero_imaginary_rephrase.npy'
         # self.path_dict['easy'] = 'rimro/envs/data/libero_imaginary_easy.npy'
         # self.path_dict['hard'] = 'rimro/envs/data/libero_imaginary_hard.npy'
-
+        self.inst2encode = np.load('./libero_files/libero_encode.npy', allow_pickle=True).item()
     def reset(self, **kwargs):
         if self.ptr is None:
             self.ptr = 0
         else:
             self.ptr = (self.ptr + 1) % len(self.env_list)
         curr_env = self.env_list[self.ptr]
-        obs, _ = curr_env.reset(**kwargs)
-        return obs
+        obs = curr_env.reset(**kwargs)
+        inst = random.choice(curr_env.get_instructions(curr_env.env_name))
+        self.inst_encode = self.inst2encode[inst]
+        return np.concatenate((obs, self.inst_encode), axis=0)
     
     def step(self, action):
         curr_env = self.env_list[self.ptr]
-        return curr_env.step(action)
+        obs, reward, done, info = curr_env.step(action)
+        obs = np.concatenate([obs, self.inst_encode], axis=0)
+        return obs, reward, done, info
 
     def get_dataset(self, level='rephrase'):
         self.level = level
@@ -87,26 +92,25 @@ class LiberoEnv(RIMAROEnv):
 
 
 
-# if __name__ == "__main__":
-#     env = LiberoEnv(
-#         dataset_url_dict="none",
-#         level="rephrase",
-#     )
-#     done = False
-#     obs = env.reset()
-#     while not done:
-#         action = env.action_space.sample()
-#         next_obs, reward, terminated, truncated, info = env.step(action)
-#         done = terminated or truncated
-#         print(obs)
-#         print(next_obs)
-#         print(reward)
-#         print(done)
-#         print(info)
-#     real_dataset, easy_dataset = env.get_dataset(level='easy')
-#     # print(real_dataset)
-#     # print(easy_dataset)
+if __name__ == "__main__":
+    env = LiberoEnv(
+        dataset_url_dict="none",
+        level="rephrase",
+    )
+    done = False
+    obs = env.reset()
+    while not done:
+        action = env.action_space.sample()
+        next_obs, reward, done, info = env.step(action)
+        print(obs)
+        print(next_obs)
+        print(reward)
+        print(done)
+        print(info)
+    real_dataset, easy_dataset = env.get_dataset(level='easy')
+    # print(real_dataset)
+    # print(easy_dataset)
 
-#     print("done")
+    print("done")
 
 

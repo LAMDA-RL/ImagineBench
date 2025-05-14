@@ -4,6 +4,13 @@ import numpy as np
 from gym import spaces
 import gym
 
+level2true_level = {
+    'real': 'baseline',
+    'rephrase': 'rephrase_level',
+    'easy': 'easy_level',
+    'hard': 'hard_level',
+}
+
 jump_env_name_list = [
     'jump-forward',
     'jump-backward',

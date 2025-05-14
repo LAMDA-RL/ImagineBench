@@ -12,6 +12,7 @@ ENV_ID_LIST = [
     'MetaWorld-v0',
     'BabyAI-v0',
     'Libero-v0',
+    'Mujoco-v0'
 ]
 LEVEL_LIST = [
     'real',
@@ -161,6 +162,11 @@ def make(env_id: str, **kwargs) -> RIMAROEnv:
             'real': 'https://box.nju.edu.cn/f/93ef16b8e2d64f5ea935/?dl=1',
         }
         env = LiberoEnv(**kwargs)
+    elif env_id == 'Mujoco-v0':
+        from envs.mujoco import MujocoEnv
+        kwargs['dataset_url_dict'] = {
+        }
+        env = MujocoEnv(**kwargs)
     else:
         raise NotImplementedError
     

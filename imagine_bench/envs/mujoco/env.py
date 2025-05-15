@@ -79,48 +79,52 @@ hard_level_mujoco_env_name_list = [
 ]
 
 jump_forward_instructions = ['Jump a step forward.',
-                    'Jump a step ahead.',
-                    'Leap a step forward.',
-                    'Leap a step ahead.',
-                    'Hop a step forward.',
-                    'Hop a step ahead.',
-                    'Spring a step forward.',
-                    'Spring a step ahead.',
-                    'Bound a step forward.',
-                    'Bound a step ahead.',]
+                    # 'Jump a step ahead.',
+                    # 'Leap a step forward.',
+                    # 'Leap a step ahead.',
+                    # 'Hop a step forward.',
+                    # 'Hop a step ahead.',
+                    # 'Spring a step forward.',
+                    # 'Spring a step ahead.',
+                    # 'Bound a step forward.',
+                    # 'Bound a step ahead.',
+                    ]
 
 jump_backward_instructions = ['Jump a step backward.',
-                    'Jump a step back.',
-                    'Leap a step backward.',
-                    'Leap a step back.',
-                    'Hop a step backward.',
-                    'Hop a step back.',
-                    'Spring a step backward.',
-                    'Spring a step back.',
-                    'Bound a step backward.',
-                    'Bound a step back.',]
+                    # 'Jump a step back.',
+                    # 'Leap a step backward.',
+                    # 'Leap a step back.',
+                    # 'Hop a step backward.',
+                    # 'Hop a step back.',
+                    # 'Spring a step backward.',
+                    # 'Spring a step back.',
+                    # 'Bound a step backward.',
+                    # 'Bound a step back.',
+                    ]
 
 move_forward_instructions = [f'Run forward.',
-                    f'Run ahead.',
-                    f'Sprint forward.',
-                    f'Sprint ahead.',
-                    f'Rush forward.',
-                    f'Rush ahead.',
-                    f'Dash forward.',
-                    f'Dash ahead.',
-                    f'Move forward.',
-                    f'Move ahead.',]
+                    # f'Run ahead.',
+                    # f'Sprint forward.',
+                    # f'Sprint ahead.',
+                    # f'Rush forward.',
+                    # f'Rush ahead.',
+                    # f'Dash forward.',
+                    # f'Dash ahead.',
+                    # f'Move forward.',
+                    # f'Move ahead.',
+                    ]
 
 move_backward_instructions = [f'Run backward.',
-                    f'Run back.',
-                    f'Sprint backward.',
-                    f'Sprint back.',
-                    f'Rush backward.',
-                    f'Rush back.',
-                    f'Dash backward.',
-                    f'Dash back.',
-                    f'Move backward.',
-                    f'Move back.',]
+                    # f'Run back.',
+                    # f'Sprint backward.',
+                    # f'Sprint back.',
+                    # f'Rush backward.',
+                    # f'Rush back.',
+                    # f'Dash backward.',
+                    # f'Dash back.',
+                    # f'Move backward.',
+                    # f'Move back.',
+                    ]
 
 rep_jump_forward_instructions = ['Jump a step forth.',
                     'Jump one step ahead.',
@@ -182,12 +186,13 @@ class HalfCheetahEnv(gym.Env):
         self.history_x = []
     def reset(self):
         self.timestep = 0
-        obs = self.env.reset()
+        obs, _ = self.env.reset()
         self.x_position = self.env.data.qpos[0]
         self.history_x = []
         return np.concatenate(([self.x_position], obs), axis=0)
     def step(self, action):
-        obs, reward, done, info = self.env.step(action)
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        done = terminated or truncated
         curr_x_position = self.env.data.qpos[0]
         self.timestep += 1
         obs = np.concatenate([[curr_x_position - self.x_position], obs], axis=0)

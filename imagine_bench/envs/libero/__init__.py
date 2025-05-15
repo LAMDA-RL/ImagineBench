@@ -45,7 +45,7 @@ class LiberoEnv(RIMAROEnv):
         # self.path_dict['rephrase'] = 'rimro/envs/data/libero_imaginary_rephrase.npy'
         # self.path_dict['easy'] = 'rimro/envs/data/libero_imaginary_easy.npy'
         # self.path_dict['hard'] = 'rimro/envs/data/libero_imaginary_hard.npy'
-        self.inst2encode = np.load('./libero_files/libero_encode.npy', allow_pickle=True).item()
+        self.inst2encode = np.load(os.path.dirname(__file__) + '/libero_files/libero_encode.npy', allow_pickle=True).item()
     def reset(self, **kwargs):
         if self.ptr is None:
             self.ptr = 0
@@ -75,6 +75,7 @@ class LiberoEnv(RIMAROEnv):
                 'observations': np_data['observations'][:],
                 'actions': np_data['actions'][:],
                 'rewards': np_data['rewards'][:],
+                'instructions' : np_data['instructions'][:]
             }
         
         if self.level not in self.path_dict.keys():
@@ -86,6 +87,7 @@ class LiberoEnv(RIMAROEnv):
             'observations': np_data['observations'][:],
             'actions': np_data['actions'][:],
             'rewards': np_data['rewards'][:],
+            'instructions': np_data['instructions'][:]
         }
 
         return real_dataset, imaginary_level_dataset

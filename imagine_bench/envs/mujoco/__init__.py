@@ -34,7 +34,7 @@ class MujocoEnv(RIMAROEnv):
         
         self.ptr = None
         self.path_dict = {}
-        self.inst2encode = np.load('./mujoco_files/mujoco_encode.npy', allow_pickle=True).item()
+        self.inst2encode = np.load(os.path.dirname(__file__) + '/mujoco_files/mujoco_encode.npy', allow_pickle=True).item()
     def reset(self, **kwargs):
         if self.ptr is None:
             self.ptr = 0
@@ -64,6 +64,7 @@ class MujocoEnv(RIMAROEnv):
                 'observations': np_data['observations'][:],
                 'actions': np_data['actions'][:],
                 'rewards': np_data['rewards'][:],
+                'instructions': np_data['instructions'][:]
             }
         
         if self.level not in self.path_dict.keys():
@@ -75,6 +76,7 @@ class MujocoEnv(RIMAROEnv):
             'observations': np_data['observations'][:],
             'actions': np_data['actions'][:],
             'rewards': np_data['rewards'][:],
+            'instructions': np_data['instructions'][:]
         }
 
         return real_dataset, imaginary_level_dataset

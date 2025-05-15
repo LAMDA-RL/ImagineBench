@@ -34,7 +34,7 @@ class MujocoEnv(RIMAROEnv):
         
         self.ptr = None
         self.path_dict = {}
-        self.inst2encode = np.load('./mujoco_files/mujoco_encode.npy', allow_pickle=True).item()
+        self.inst2encode = np.load(os.path.dirname(__file__) + '/libero_files/libero_encode.npy', allow_pickle=True).item()
     def reset(self, **kwargs):
         if self.ptr is None:
             self.ptr = 0

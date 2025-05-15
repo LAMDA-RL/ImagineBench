@@ -13,7 +13,7 @@ import gymnasium
 import numpy as np
 from tqdm import tqdm
 import torch.nn as nn
-from envs.mujoco import MujocoEnv
+from envs.libero import LiberoEnv
 from d3rlpy.dataset.components import Episode
 from d3rlpy.models.encoders import EncoderFactory
 from d3rlpy.logging import TensorboardAdapterFactory
@@ -225,7 +225,7 @@ def get_args():
     return args
 
 
-def EvalCallBackMujoco(agent: QLearningAlgoBase, epoch: int, total_step: int) -> None:
+def EvalCallBackLibero(agent: QLearningAlgoBase, epoch: int, total_step: int) -> None:
 
     if level == "train":
         env_dict = {"train": real_env, 
@@ -297,22 +297,22 @@ def EvalCallBackMujoco(agent: QLearningAlgoBase, epoch: int, total_step: int) ->
 
 if __name__ == '__main__':
     args = get_args()
-    real_env = MujocoEnv(level = "real", dataset_url_dict={})
-    rephrase_env = MujocoEnv(level = "rephrase", dataset_url_dict={})
-    easy_env = MujocoEnv(level = "easy", dataset_url_dict={})
-    hard_env = MujocoEnv(level = "hard", dataset_url_dict={})
+    real_env = LiberoEnv(level = "real", dataset_url_dict={})
+    rephrase_env = LiberoEnv(level = "rephrase", dataset_url_dict={})
+    easy_env = LiberoEnv(level = "easy", dataset_url_dict={})
+    hard_env = LiberoEnv(level = "hard", dataset_url_dict={})
     level = args.ds_type
     if level == "train":
-        env = MujocoEnv(level = "real", dataset_url_dict={})
+        env = LiberoEnv(level = "real", dataset_url_dict={})
     else:
-        env = MujocoEnv(level = level, dataset_url_dict={})
+        env = LiberoEnv(level = level, dataset_url_dict={})
     inst2encode = env.inst2encode
-    real_dataset_path = "../../rimro_offline/data/data/mujoco_real.npy"
+    real_dataset_path = "../../rimro_offline/data/libero/offline_baseline_final_small.npy"
     real_dataset = np.load(real_dataset_path, allow_pickle=True).item()
     if level == "train":
         imagine_dataset = None
     else:
-        imagine_dataset_path = f"../../rimro_offline/data/data/mujoco_{level}.npy"
+        imagine_dataset_path = f"../../rimro_offline/data/libero/offline_{level}_final_small.npy"
         imagine_dataset = np.load(imagine_dataset_path, allow_pickle=True).item()
     llata_episodes = convert_dataset(
         real_data=real_dataset, imagine_data=imagine_dataset,
@@ -354,7 +354,7 @@ if __name__ == '__main__':
         ).create(device=args.device)
     else:
         raise NotImplementedError
-    exp_name = 'Mujoco'
+    exp_name = 'Libero'
     kwargs = vars(args)    
     exp_name = f'{exp_name}_{"i-" if imagine_dataset is not None else ""}{kwargs["ds_type"].replace("_level", "")}'
     exp_name_temp = f'{exp_name}_{kwargs["agent_name"]}_seed{kwargs["seed"]}'
@@ -372,7 +372,7 @@ if __name__ == '__main__':
         experiment_name=exp_name,
         with_timestamp=False,
         logger_adapter=TensorboardAdapterFactory(root_dir=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-        epoch_callback=EvalCallBackMujoco,
+        epoch_callback=EvalCallBackLibero,
     )
 
     print("===> offline training finished")

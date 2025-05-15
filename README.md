@@ -54,10 +54,20 @@ Then install the ImagineBench package:
 pip install -e .
 ```
 If you want to use libero env, please install [LIBERO](https://github.com/Lifelong-Robot-Learning/LIBERO) first.
+## Data in ImagineBench
+In ImagineBench, real data and imaginary data returned by `get_dataset()` function are `dict` with the same format, where **N** is # of trajectories and **T** is max trajectory length.
+
+- `observations`: An **(N, T, D)** array, where *D* is dim of observation space concatenated with instruction encoding.
+
+- `actions`: An **(N, T, D)** array, where *D* is dim of action space.
+
+- `rewards`: An **(N, T, 1)** array.
+
+- `masks`: An **(N, T, 1)** array indicating whether each time step in a trajectory is valid(1) or padding(0).
 
 ## Basic usage
 
-**Environment** 
+**Get dataset** 
 ```python
 import imagine_bench
 

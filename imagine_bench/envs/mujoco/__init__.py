@@ -34,7 +34,7 @@ class MujocoEnv(RIMAROEnv):
         
         self.ptr = None
         self.path_dict = {}
-        self.inst2encode = np.load(os.path.dirname(__file__) + '/mujoco_files/mujoco_encode.npy', allow_pickle=True).item()
+        self.inst2encode = np.load('./mujoco_files/mujoco_encode.npy', allow_pickle=True).item()
     def reset(self, **kwargs):
         if self.ptr is None:
             self.ptr = 0
@@ -59,24 +59,38 @@ class MujocoEnv(RIMAROEnv):
             self.path_dict['real'] = download_dataset_from_url(self.dataset_url_dict['real'])
         real_dataset_path = self.path_dict['real']
         np_data = np.load(real_dataset_path, allow_pickle=True).item()
+        masks = np_data['masks'][:],
+        observations = np_data['observations'][:],
+        actions = np_data['actions'][:],
+        rewards = np_data['rewards'][:],
+        instructions = np_data['instructions'][:],
+        encoding = np.array([self.inst_encode[inst[0]] for inst in instructions])
+        encoding = encoding[:, np.newaxis, :].repeat(observations.shape[1], axis=1)
+        observations = np.concatenate([observations, encoding], axis=-1)
         real_dataset = {
-                'masks': np_data['masks'][:],
-                'observations': np_data['observations'][:],
-                'actions': np_data['actions'][:],
-                'rewards': np_data['rewards'][:],
-                'instructions': np_data['instructions'][:]
-            }
+            'masks': masks,
+            'observations': observations,
+            'actions': actions,
+            'rewards': rewards,
+        }
         
         if self.level not in self.path_dict.keys():
             self.path_dict[self.level] = download_dataset_from_url(self.dataset_url_dict[self.level])
         imaginary_level_dataset_path = self.path_dict[self.level]
         np_data = np.load(imaginary_level_dataset_path, allow_pickle=True).item()
+        masks = np_data['masks'][:],
+        observations = np_data['observations'][:],
+        actions = np_data['actions'][:],
+        rewards = np_data['rewards'][:],
+        instructions = np_data['instructions'][:],
+        encoding = np.array([self.inst_encode[inst[0]] for inst in instructions])
+        encoding = encoding[:, np.newaxis, :].repeat(observations.shape[1], axis=1)
+        observations = np.concatenate([observations, encoding], axis=-1)
         imaginary_level_dataset = {
-            'masks': np_data['masks'][:],
-            'observations': np_data['observations'][:],
-            'actions': np_data['actions'][:],
-            'rewards': np_data['rewards'][:],
-            'instructions': np_data['instructions'][:]
+            'masks': masks,
+            'observations': observations,
+            'actions': actions,
+            'rewards': rewards,
         }
 
         return real_dataset, imaginary_level_dataset

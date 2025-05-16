@@ -67,6 +67,15 @@ In ImagineBench, real data and imaginary data returned by `get_dataset()` functi
 
 ## Basic usage
 
+**Training**
+To start offline RL training with imaginary rollouts, choose:
+`ALGO` from `[bc, cql, bcq, td3+bc]`
+`ENV` from `[Ball-v0, MetaWorld-v0, BabyAI-v0, Libero-v0, Mujoco-v0]`
+`DATASET_TYPE` from `[train, rephrase, easy, hard]`
+```
+python imagine_bench/train.py --algo ALGO --env ENV --ds_type DATASET_TYPE  --device DEVICE --seed SEED
+```
+
 **Get dataset** 
 ```python
 import imagine_bench
@@ -80,7 +89,7 @@ env = imagine_bench.make('MetaWorld-v0', level='easy')
 real_data, imaginary_rollout_easy = env.get_dataset(level="easy")
 ```
 
-**Offline RL Training with d3rlpy** 
+**Example for Offline RL Training with d3rlpy** 
 ```python
 import d3rlpy
 import imagine_bench

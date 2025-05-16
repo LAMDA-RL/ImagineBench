@@ -1,16 +1,20 @@
-from typing import List, Dict
+import os
+import sys
+from typing import Dict, Tuple, Union
 
 import numpy as np
 from minigrid.wrappers import ImgObsWrapper
 
 from envs import RIMAROEnv, LEVEL_LIST, download_dataset_from_url
-from envs.babyai.env import MyGrid, EncodeWrapper, MyWrapper
-from envs.babyai.grid_utils import baseline_env_name_list, rephrase_level_env_name_list, easy_level_env_name_list, hard_level_env_name_list
-from envs.babyai.env import (
-    GoToEnv, OpenEnv, PickUpEnv, PutNextEnv,
-    GotoSeqEnv, PickUpSeqEnv, GoSEnv, GoTEnv,
-    OpenLockEnv, PutLineEnv, PutPileEnv
-)
+
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+
+from base import MyWrapper, ActionWrapper, DenseRewardWrapper, EncodeWrapper, LanguageWrapper
+from real import GoToEnv, OpenEnv, PickUpEnv, PutNextEnv
+from easy import OpenGoEnv, OpenPickEnv, GoWallEnv, GoCenterEnv
+from hard import OpenLockEnv, PutLineEnv, PutPileEnv
 
 
 class BabyAIEnv(RIMAROEnv):
@@ -18,106 +22,80 @@ class BabyAIEnv(RIMAROEnv):
         self.dataset_url_dict = kwargs['dataset_url_dict']
 
         self.level = kwargs['level']
-        if self.level == 'real':
-            self.env_name_list = baseline_env_name_list.copy()
-        elif self.level == 'rephrase_level':
-            self.env_name_list = rephrase_level_env_name_list.copy()
-        elif self.level == 'easy_level':
-            self.env_name_list = easy_level_env_name_list.copy()
-        elif self.level == 'hard_level':
-            self.env_name_list = hard_level_env_name_list.copy()
+        if self.level in ['real', 'rephrase']:
+            env_list = [GoToEnv, OpenEnv, PickUpEnv, PutNextEnv]
+        elif self.level == 'easy':
+            env_list = [OpenGoEnv, OpenPickEnv, GoWallEnv, GoCenterEnv]
+        elif self.level == 'hard':
+            env_list = [OpenLockEnv, PutLineEnv, PutPileEnv]
         else:
             raise NotImplementedError
         
-        self.env_list: List[MyGrid] = []
-        for env_name in self.env_name_list:
-            if self.level in ['real', 'rephrase_level']:
-                if env_name == 'goto':
-                    env = GoToEnv()
-                elif env_name == 'open':
-                    env = OpenEnv()
-                elif env_name == 'pickup':
-                    env = PickUpEnv()
-                elif env_name == 'putnext':
-                    env = PutNextEnv()
-                else:
-                    raise NotImplementedError
-            elif self.level == 'easy':
-                if env_name == 'goto_seq':
-                    env = GotoSeqEnv()
-                elif env_name == 'pickup_seq':
-                    env = PickUpSeqEnv()
-                elif env_name == 'go_straight':
-                    env = GoSEnv()
-                elif env_name == 'go_turn':
-                    env = GoTEnv()
-                else:
-                    raise NotImplementedError
-            elif self.level == 'hard':
-                if env_name == 'open_lock':
-                    env = OpenLockEnv()
-                elif env_name == 'put_line':
-                    env = PutLineEnv()
-                elif env_name == 'put_pile':
-                    env = PutPileEnv()
-                else:
-                    raise NotImplementedError
-            else:
-                raise NotImplementedError
+        for i in range(len(env_list)):
+            env = env_list[i]()
+            env = ActionWrapper(env)
             env = ImgObsWrapper(env)
             env = EncodeWrapper(env)
+            env = DenseRewardWrapper(env)
             env = MyWrapper(env)
-            self.env_list.append(env)
+            env_list[i] = env
+        self.env = LanguageWrapper(
+            env_list=env_list,
+            inst_encode_path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'babyai_encode.npy'),
+            level=self.level,
+            use_gym=False
+            )
         
-        self.action_space = self.env_list[0].action_space
+        self.action_space = self.env.action_space
         
-        self.ptr = None
         self.path_dict = {}
 
         # lky: for debug
-        self.path_dict['real'] = '/mnt/data/lky/data/BabyAI/babyai1.npy'
-        self.path_dict['rephrase'] = '/home/liky/project/KALM_BabyAI/imagine_data_processed/imagine_processed_rephrase_04-06_15-27-37.npy'
-        self.path_dict['easy'] = '/home/liky/project/KALM_BabyAI/imagine_data_processed/imagine_processed_easy_04-06_17-28-32.npy'
-        self.path_dict['hard'] = '/home/liky/project/KALM_BabyAI/imagine_data_processed/imagine_processed_hard_04-06_19-56-03.npy'
+        self.path_dict['real'] = '/mnt/data/lky/data/RIMRO/babyai_real.npy'
+        # self.path_dict['rephrase'] = '/mnt/data/lky/data/RIMRO/babyai_rephrase.npy'
+        self.path_dict['easy'] = '/mnt/data/lky/data/RIMRO/babyai_easy.npy'
+        self.path_dict['hard'] = '/mnt/data/lky/data/RIMRO/babyai_hard.npy'
 
     def reset(self, **kwargs):
-        if self.ptr is None:
-            self.ptr = 0
-        else:
-            self.ptr = (self.ptr + 1) % len(self.env_list)
-        curr_env = self.env_list[self.ptr]
-
-        return curr_env.reset(**kwargs)
+        return self.env.reset(**kwargs)
     
     def step(self, action: int):
-        curr_env: MyGrid = self.env_list[self.ptr]
-        return curr_env.step(action)
+        return self.env.step(action)
     
-    def get_dataset(self, level: str = 'rephrase') -> Dict[str, np.ndarray]:
-        self.level = level
-
-        assert self.level in LEVEL_LIST, f'level should be in {LEVEL_LIST}, but got {self.level}'
+    def get_dataset(self, level: str = 'rephrase') -> Tuple[Dict[str, np.ndarray], Union[Dict[str, np.ndarray], None]]:
+        assert level in LEVEL_LIST, f'level should be in {LEVEL_LIST}, but got {self.level}'
 
         if 'real' not in self.path_dict.keys():
             self.path_dict['real'] = download_dataset_from_url(self.dataset_url_dict['real'])
         real_dataset_path = self.path_dict['real']
         np_data = np.load(real_dataset_path, allow_pickle=True).item()
+        encoding = np.array([self.env.inst2encode[inst[0]] for inst in np_data['instructions']])
+        observations: np.ndarray = np_data['observations']
+        encoding = encoding[:, np.newaxis, :].repeat(observations.shape[1], axis=1)
+        observations = np.concatenate([observations, encoding], axis=-1)
         real_dataset = {
                 'masks': np_data['masks'][:],
-                'observations': np_data['observations'][:],
+                'observations': observations,
                 'actions': np_data['actions'][:],
                 'rewards': np_data['rewards'][:],
             }
         
-        if self.level not in self.path_dict.keys():
-            self.path_dict[self.level] = download_dataset_from_url(self.dataset_url_dict[self.level])
-        imaginary_level_dataset_path = self.path_dict[self.level]
-        np_data = np.load(imaginary_level_dataset_path, allow_pickle=True).item()
-        imaginary_level_dataset = {
-            'masks': np_data['masks'][:],
-            'observations': np_data['observations'][:],
-            'actions': np_data['actions'][:],
-            'rewards': np_data['rewards'][:],
-        }
+        if level != 'real':
+            if level not in self.path_dict.keys():
+                self.path_dict[level] = download_dataset_from_url(self.dataset_url_dict[f'{level}'])
+            imaginary_level_dataset_path = self.path_dict[level]
+            np_data = np.load(imaginary_level_dataset_path, allow_pickle=True).item()
+            encoding = np.array([self.env.inst2encode[inst[0]] for inst in np_data['instructions']])
+            observations: np.ndarray = np_data['observations']
+            encoding = encoding[:, np.newaxis, :].repeat(observations.shape[1], axis=1)
+            observations = np.concatenate([observations, encoding], axis=-1)
+            imaginary_level_dataset = {
+                'masks': np_data['masks'][:],
+                'observations': observations,
+                'actions': np_data['actions'][:],
+                'rewards': np_data['rewards'][:],
+            }
 
-        return real_dataset, imaginary_level_dataset
+            return real_dataset, imaginary_level_dataset
+        else:
+            return real_dataset, None

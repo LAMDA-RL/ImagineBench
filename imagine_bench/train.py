@@ -99,7 +99,7 @@ if __name__ == '__main__':
     elif level == 'hard':
         env_dict = {'hard': hard_env}
     callback = CallBack()
-    callback.add_eval_env(env_dict=env_dict, eval_num=args.eval_episodes, eval_json_save_path=json_log_dir)
+    callback.add_eval_env(env_dict=env_dict, eval_num=args.eval_episodes, eval_json_save_path=json_log_path)
     # offline training
     agent.fit(
         dataset=dataset,

@@ -186,13 +186,12 @@ class HalfCheetahEnv(gym.Env):
         self.history_x = []
     def reset(self):
         self.timestep = 0
-        obs, _ = self.env.reset()
+        obs = self.env.reset()
         self.x_position = self.env.data.qpos[0]
         self.history_x = []
         return np.concatenate(([self.x_position], obs), axis=0)
     def step(self, action):
-        obs, reward, terminated, truncated, info = self.env.step(action)
-        done = terminated or truncated
+        obs, reward, done, info = self.env.step(action)
         curr_x_position = self.env.data.qpos[0]
         self.timestep += 1
         obs = np.concatenate([[curr_x_position - self.x_position], obs], axis=0)

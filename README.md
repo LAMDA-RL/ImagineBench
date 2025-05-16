@@ -68,6 +68,7 @@ In ImagineBench, real data and imaginary data returned by `get_dataset()` functi
 ## Basic usage
 
 **Training**
+
 To start offline RL training with imaginary rollouts, choose:
 
 `ALGO` from `[bc, cql, bcq, td3+bc]`

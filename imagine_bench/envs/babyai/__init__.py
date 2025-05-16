@@ -11,7 +11,7 @@ from envs import RIMAROEnv, LEVEL_LIST, download_dataset_from_url
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 
-from base import MyWrapper, ActionWrapper, DenseRewardWrapper, EncodeWrapper, LanguageWrapper
+from base import MyWrapper, ActionWrapper, DenseRewardWrapper, EncodeWrapper, LanguageWrapper, MyGrid
 from real import GoToEnv, OpenEnv, PickUpEnv, PutNextEnv
 from easy import OpenGoEnv, OpenPickEnv, GoWallEnv, GoCenterEnv
 from hard import OpenLockEnv, PutLineEnv, PutPileEnv

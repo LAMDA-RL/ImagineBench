@@ -1,6 +1,5 @@
 import os
 import h5py
-import urllib.request
 from pathlib import Path
 import progressbar
 import urllib.request
@@ -63,7 +62,7 @@ url2ds_name = {
     'https://box.nju.edu.cn/f/53e31be7ab9248e4b292/?dl=1': 'ball_imaginary_hard.npy',
     'https://box.nju.edu.cn/f/1185b8b8673a47daae6c/?dl=1': 'ball_imaginary_easy.h5',
     'https://box.nju.edu.cn/f/d3bceb9d5c5248d8b410/?dl=1': 'ball_imaginary_rephrase.npy',
-    'https://box.nju.edu.cn/f/e7465d994af04ffc9f21/?dl=1': 'ball_real.h5',
+    'https://box.nju.edu.cn/f/e7465d994af04ffc9f21/?dl=1': 'ball_real.hdf5',
     'https://box.nju.edu.cn/f/ede29bd4d9d74c93a6d4/?dl=1': 'ball_real.npy',
     # metaworld
     'https://box.nju.edu.cn/f/6b56624598f0487fb65a/?dl=1': 'metaworld_imaginary_easy.h5',

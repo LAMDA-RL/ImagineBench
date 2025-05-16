@@ -99,8 +99,9 @@ real_data, imaginary_rollout_easy = env.get_dataset(level="easy")
 import d3rlpy
 import imagine_bench
 from imagine_bench.utils import LlataEncoderFactory, make_d3rlpy_dataset
-
+from imagine_bench.evaluations import CallBack
 env = imagine_bench.make('Mujoco-v0', level='rephrase')
+env_eval = imagine_bench.make('Mujoco-v0', level='rephrase')
 real_data, imaginary_rollout_rephrase = env.get_dataset(level="rephrase") 
 dataset = make_d3rlpy_dataset(real_data, imaginary_rollout_rephrase)
 
@@ -109,9 +110,13 @@ agent = d3rlpy.algos.TD3PlusBCConfig(
             critic_encoder_factory=LlataEncoderFactory(feature_size=256, hidden_size=256),
         ).create(device="cuda:0")
 
+callback = CallBack()
+callback.add_eval_env(env_dict={'rephrase': env_eval}, eval_num=10)
+
 agent.fit(
         dataset=dataset,
         n_steps=500000,
         experiment_name="mujoco",
+        epoch_callback=callback.EvalCallback,
     )
 ```

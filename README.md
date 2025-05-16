@@ -78,7 +78,7 @@ To start offline RL training with imaginary rollouts, choose:
 `DATASET_TYPE` from `[train, rephrase, easy, hard]`
 
 ```
-python imagine_bench/train.py --algo ALGO --env ENV --ds_type DATASET_TYPE  --device DEVICE --seed SEED
+python imagine_bench/offline_train.py --algo ALGO --env ENV --ds_type DATASET_TYPE  --device DEVICE --seed SEED
 ```
 
 **Get dataset** 

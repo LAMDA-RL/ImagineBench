@@ -57,13 +57,13 @@ def get_keys(h5file):
 
 url2ds_name = {
     # ball
-    'https://box.nju.edu.cn/f/c67fb5ed23694db0baaa/?dl=1': 'ball_imaginary_easy.h5',
+    'https://box.nju.edu.cn/f/c67fb5ed23694db0baaa/?dl=1': 'ball_imaginary_rephrase.h5',
     'https://box.nju.edu.cn/f/e857ae10a53a4758a81f/?dl=1': 'ball_imaginary_easy.npy',
     'https://box.nju.edu.cn/f/ac414bd4cf014dce87c6/?dl=1': 'ball_imaginary_hard.h5',
     'https://box.nju.edu.cn/f/53e31be7ab9248e4b292/?dl=1': 'ball_imaginary_hard.npy',
-    'https://box.nju.edu.cn/f/1185b8b8673a47daae6c/?dl=1': 'ball_imaginary_rephrase.h5',
+    'https://box.nju.edu.cn/f/1185b8b8673a47daae6c/?dl=1': 'ball_imaginary_easy.h5',
     'https://box.nju.edu.cn/f/d3bceb9d5c5248d8b410/?dl=1': 'ball_imaginary_rephrase.npy',
-    'https://box.nju.edu.cn/f/76fd601e30e54975809f/?dl=1': 'ball_real.h5',
+    'https://box.nju.edu.cn/f/e7465d994af04ffc9f21/?dl=1': 'ball_real.h5',
     'https://box.nju.edu.cn/f/ede29bd4d9d74c93a6d4/?dl=1': 'ball_real.npy',
     # metaworld
     'https://box.nju.edu.cn/f/6b56624598f0487fb65a/?dl=1': 'metaworld_imaginary_easy.h5',
@@ -76,15 +76,15 @@ url2ds_name = {
     'https://box.nju.edu.cn/f/e4d6695bcbe141bf927b/?dl=1': 'babyai_imaginary_rephrase.npy',
     'https://box.nju.edu.cn/f/47ef43a660874409a420/?dl=1': 'babyai_real.npy',
     # libero
-    'https://box.nju.edu.cn/f/c8a4efcff22c46098535/?dl=1': 'libero_imaginary_easy.npy',
-    'https://box.nju.edu.cn/f/39741deb735843ddbeec/?dl=1': 'libero_imaginary_hard.npy',
-    'https://box.nju.edu.cn/f/e1f3d5d9c7bb4fc78a2d/?dl=1': 'libero_imaginary_rephrase.npy',
+    'https://box.nju.edu.cn/f/1776405d68734731b96f/?dl=1': 'libero_imaginary_easy.npy',
+    'https://box.nju.edu.cn/f/8c1dce3a0ead47b6a67a/?dl=1': 'libero_imaginary_hard.npy',
+    'https://box.nju.edu.cn/f/f5dc1425fcb742428ef1/?dl=1': 'libero_imaginary_rephrase.npy',
     'https://box.nju.edu.cn/f/93ef16b8e2d64f5ea935/?dl=1': 'libero_real.npy',
     # mujoco
     'https://box.nju.edu.cn/f/dbf3a096b380460bb1b9/?dl=1': 'mujoco_imaginary_easy.npy',
     'https://box.nju.edu.cn/f/f70e67f27c8d40d59568/?dl=1': 'mujoco_imaginary_hard.npy',
-    'https://box.nju.edu.cn/f/c53bc2307c6d49ea9b0b/?dl=1':'mujoco_imaginary_easy.npy',
-    'https://box.nju.edu.cn/f/44f5c558982e4dc3b5d5/?dl=1':'mujoco_real.npy',
+    'https://box.nju.edu.cn/f/c53bc2307c6d49ea9b0b/?dl=1': 'mujoco_imaginary_easy.npy',
+    'https://box.nju.edu.cn/f/44f5c558982e4dc3b5d5/?dl=1': 'mujoco_real.npy',
 }
 
 
@@ -136,7 +136,7 @@ def make(env_id: str, **kwargs) -> RIMAROEnv:
             'imaginary_hard_npy': 'https://box.nju.edu.cn/f/53e31be7ab9248e4b292/?dl=1',
             'imaginary_easy_h5': 'https://box.nju.edu.cn/f/1185b8b8673a47daae6c/?dl=1',
             'imaginary_rephrase_npy': 'https://box.nju.edu.cn/f/d3bceb9d5c5248d8b410/?dl=1',
-            'real_h5': 'https://box.nju.edu.cn/f/76fd601e30e54975809f/?dl=1',
+            'real_h5': 'https://box.nju.edu.cn/f/e7465d994af04ffc9f21/?dl=1',
             'real_npy': 'https://box.nju.edu.cn/f/ede29bd4d9d74c93a6d4/?dl=1',
         }
         env = BallEnv(**kwargs)
@@ -161,9 +161,9 @@ def make(env_id: str, **kwargs) -> RIMAROEnv:
     elif env_id == 'Libero-v0':
         from envs.libero import LiberoEnv
         kwargs['dataset_url_dict'] = {
-            'easy': 'https://box.nju.edu.cn/f/c8a4efcff22c46098535/?dl=1',
-            'hard': 'https://box.nju.edu.cn/f/39741deb735843ddbeec/?dl=1',
-            'rephrase': 'https://box.nju.edu.cn/f/e1f3d5d9c7bb4fc78a2d/?dl=1',
+            'easy': 'https://box.nju.edu.cn/f/1776405d68734731b96f/?dl=1',
+            'hard': 'https://box.nju.edu.cn/f/8c1dce3a0ead47b6a67a/?dl=1',
+            'rephrase': 'https://box.nju.edu.cn/f/f5dc1425fcb742428ef1/?dl=1',
             'real': 'https://box.nju.edu.cn/f/93ef16b8e2d64f5ea935/?dl=1',
         }
         env = LiberoEnv(**kwargs)

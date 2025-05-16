@@ -70,12 +70,12 @@ class LiberoEnv(RIMAROEnv):
             self.path_dict['real'] = download_dataset_from_url(self.dataset_url_dict['real'])
         real_dataset_path = self.path_dict['real']
         np_data = np.load(real_dataset_path, allow_pickle=True).item()
-        masks = np_data['masks'][:],
-        observations = np_data['observations'][:],
-        actions = np_data['actions'][:],
-        rewards = np_data['rewards'][:],
-        instructions = np_data['instructions'][:],
-        encoding = np.array([self.inst_encode[inst[0]] for inst in instructions])
+        masks = np_data['masks'][:]
+        observations = np_data['observations'][:]
+        actions = np_data['actions'][:]
+        rewards = np_data['rewards'][:]
+        instructions = np_data['instructions'][:]
+        encoding = np.array([self.inst2encode[inst[0]] for inst in instructions])
         encoding = encoding[:, np.newaxis, :].repeat(observations.shape[1], axis=1)
         observations = np.concatenate([observations, encoding], axis=-1)
         real_dataset = {
@@ -89,12 +89,12 @@ class LiberoEnv(RIMAROEnv):
             self.path_dict[self.level] = download_dataset_from_url(self.dataset_url_dict[self.level])
         imaginary_level_dataset_path = self.path_dict[self.level]
         np_data = np.load(imaginary_level_dataset_path, allow_pickle=True).item()
-        masks = np_data['masks'][:],
-        observations = np_data['observations'][:],
-        actions = np_data['actions'][:],
-        rewards = np_data['rewards'][:],
-        instructions = np_data['instructions'][:],
-        encoding = np.array([self.inst_encode[inst[0]] for inst in instructions])
+        masks = np_data['masks'][:]
+        observations = np_data['observations'][:]
+        actions = np_data['actions'][:]
+        rewards = np_data['rewards'][:]
+        instructions = np_data['instructions'][:]
+        encoding = np.array([self.inst2encode[inst[0]] for inst in instructions])
         encoding = encoding[:, np.newaxis, :].repeat(observations.shape[1], axis=1)
         observations = np.concatenate([observations, encoding], axis=-1)
         imaginary_level_dataset = {

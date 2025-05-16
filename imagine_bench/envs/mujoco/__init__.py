@@ -41,16 +41,16 @@ class MujocoEnv(RIMAROEnv):
         else:
             self.ptr = (self.ptr + 1) % len(self.env_list)
         curr_env = self.env_list[self.ptr]
-        obs = curr_env.reset(**kwargs)
+        obs, info = curr_env.reset(**kwargs)
         inst = random.choice(curr_env.get_instructions())
         self.inst_encode = self.inst2encode[inst]
-        return np.concatenate((obs, self.inst_encode), axis=0)
+        return np.concatenate((obs, self.inst_encode), axis=0), info
     
     def step(self, action):
         curr_env = self.env_list[self.ptr]
-        obs, reward, done, info = curr_env.step(action)
+        obs, reward, terminated, truncated, info = curr_env.step(action)
         obs = np.concatenate([obs, self.inst_encode], axis=0)
-        return obs, reward, done, info
+        return obs, reward, terminated, truncated, info
 
     def get_dataset(self, level='rephrase'):
         self.level = level

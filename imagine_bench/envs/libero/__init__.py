@@ -3,8 +3,9 @@ from gym import spaces
 import numpy as np
 import sys
 import os
-from libero.libero.envs import OffScreenRenderEnv
-from libero.libero import benchmark
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ".")))
+from Libero.libero.envs import OffScreenRenderEnv
+from Libero.libero import benchmark
 import random
 import matplotlib.pyplot as plt
 import cv2
@@ -52,16 +53,16 @@ class LiberoEnv(RIMAROEnv):
         else:
             self.ptr = (self.ptr + 1) % len(self.env_list)
         curr_env = self.env_list[self.ptr]
-        obs = curr_env.reset(**kwargs)
+        obs, _ = curr_env.reset(**kwargs)
         inst = random.choice(curr_env.get_instructions(curr_env.env_name))
         self.inst_encode = self.inst2encode[inst]
-        return np.concatenate((obs, self.inst_encode), axis=0)
+        return np.concatenate((obs, self.inst_encode), axis=0), {}
     
     def step(self, action):
         curr_env = self.env_list[self.ptr]
-        obs, reward, done, info = curr_env.step(action)
+        obs, reward, terminated, truncated, info = curr_env.step(action)
         obs = np.concatenate([obs, self.inst_encode], axis=0)
-        return obs, reward, done, info
+        return obs, reward, terminated, truncated, info
 
     def get_dataset(self, level='rephrase'):
         self.level = level

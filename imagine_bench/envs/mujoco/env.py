@@ -177,7 +177,7 @@ class HalfCheetahEnv(gym.Env):
     def __init__(self, task=None):
         super(HalfCheetahEnv, self).__init__()
         self.task = task
-        self.env = gym.make("HalfCheetah-v2")
+        self.env = gym.make("HalfCheetah-v4")
         self.env._max_episode_steps = 200
         self.observation_space =  spaces.Box(low=-np.inf, high=np.inf, shape=(18,), dtype=np.float32)
         self.action_space = spaces.Box(low=-1, high=1, shape=(6,), dtype=np.float32)
@@ -186,12 +186,13 @@ class HalfCheetahEnv(gym.Env):
         self.history_x = []
     def reset(self):
         self.timestep = 0
-        obs = self.env.reset()
+        obs, info = self.env.reset()
         self.x_position = self.env.data.qpos[0]
         self.history_x = []
-        return np.concatenate(([self.x_position], obs), axis=0)
+        return np.concatenate(([self.x_position], obs), axis=0), info
     def step(self, action):
-        obs, reward, done, info = self.env.step(action)
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        done = terminated or truncated
         curr_x_position = self.env.data.qpos[0]
         self.timestep += 1
         obs = np.concatenate([[curr_x_position - self.x_position], obs], axis=0)
@@ -201,8 +202,8 @@ class HalfCheetahEnv(gym.Env):
         success = self.get_success()
         info['success'] = success
         if success:
-            done = True
-        return obs, reward, done, info
+            terminated = True
+        return obs, reward, terminated, truncated, info
     def get_success(self):
         success = False
         if self.task == 'jump-forward':

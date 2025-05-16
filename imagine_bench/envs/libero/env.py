@@ -3,13 +3,12 @@ from gym import spaces
 import numpy as np
 import sys
 import os
-from libero.libero.envs import OffScreenRenderEnv
-from libero.libero import benchmark
+from Libero.libero.envs import OffScreenRenderEnv
+from Libero.libero import benchmark
 import random
 import matplotlib.pyplot as plt
 from gymnasium import Env, Wrapper
 from gymnasium.core import Any, WrapperObsType, WrapperActType
-from stable_baselines3.common.vec_env import SubprocVecEnv
 
 #easy level
 
@@ -211,7 +210,7 @@ class VectorLibero(gym.Env):
         self.placed2 = False
         self.placed3 = False
         self.init_state = None
-        return obs
+        return obs, {}
     
     def reset_with_img(self):
         obs = self.env.reset()
@@ -272,7 +271,7 @@ class VectorLibero(gym.Env):
             info['success'] = True
         else:
             info['success'] = False
-        return state, reward, done, info
+        return state, reward, terminated, truncated, info
     def render(self):
         return self.img
     

@@ -1,11 +1,13 @@
+import os
 import sys
 import h5py
+import urllib.request
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent))
 import numpy as np
-from envs import LEVEL_LIST, RIMAROEnv, download_dataset_from_url
+from envs import DATASET_PATH, LEVEL_LIST, RIMAROEnv, download_dataset_from_url, show_progress
 from clevr_robot_env import LlataEnv
-from utils.clevr_utils import terminal_fn_with_level, CLEVR_QPOS_OBS_INDICES
+from clevr_utils import terminal_fn_with_level, CLEVR_QPOS_OBS_INDICES
 
 
 level2true_level = {
@@ -156,3 +158,18 @@ class BallEnv(RIMAROEnv, LlataEnv):
         instruction = np.random.choice(self.real_data_info['instructions'][self.ptr])
 
         return instruction
+    
+    def prepare_test(self):
+        test_data_url_dict = {
+            'baseline': 'https://box.nju.edu.cn/f/4618c2d3ec614d07937f/?dl=1',
+            'rephrase_level': 'https://box.nju.edu.cn/f/ac679a8e7e9745d5b392/?dl=1',
+            "easy_level": 'https://box.nju.edu.cn/f/b0731b98de1a46d0bbfa/?dl=1',
+            "hard_level": 'https://box.nju.edu.cn/f/7280d5c025e4419a86b0/?dl=1'
+        }
+        for level in ['baseline', 'rephrase_level', 'easy_level', 'hard_level']:
+            test_data_path = os.path.join(DATASET_PATH, f'clevr_test_{level}.npy')
+            dataset_url = test_data_url_dict[level]
+            if not os.path.exists(test_data_path):
+                urllib.request.urlretrieve(dataset_url, test_data_path, show_progress)
+                if not os.path.exists(test_data_path):
+                    raise IOError("Failed to download dataset from %s" % dataset_url)

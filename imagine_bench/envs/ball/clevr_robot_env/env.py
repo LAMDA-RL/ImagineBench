@@ -611,8 +611,10 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         raise 0
 
 
-from utils.clevr_utils import goal_src, goal_dst
-from utils.clevr_utils import color_list
+import sys
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'utils'))
+from clevr_utils import goal_src, goal_dst
+from clevr_utils import color_list
 
 
 class LangEnv(ClevrEnv):
@@ -662,7 +664,11 @@ class LangEnv(ClevrEnv):
                          use_camera=use_camera)
         assert self.direct_obs and self.obs_type == 'order_invariant'
         
-        obs, _ = self.reset()
+        reset_result = self.reset()
+        try:
+            obs, _ = reset_result
+        except:
+            obs = reset_result
         self.observation_space = spaces.Box(
             low=-10,
             high=10,

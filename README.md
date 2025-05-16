@@ -69,9 +69,13 @@ In ImagineBench, real data and imaginary data returned by `get_dataset()` functi
 
 **Training**
 To start offline RL training with imaginary rollouts, choose:
+
 `ALGO` from `[bc, cql, bcq, td3+bc]`
+
 `ENV` from `[Ball-v0, MetaWorld-v0, BabyAI-v0, Libero-v0, Mujoco-v0]`
+
 `DATASET_TYPE` from `[train, rephrase, easy, hard]`
+
 ```
 python imagine_bench/train.py --algo ALGO --env ENV --ds_type DATASET_TYPE  --device DEVICE --seed SEED
 ```

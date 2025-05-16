@@ -1,29 +1,14 @@
 import os
-import json
 import random
 import argparse
-import dataclasses
 from datetime import datetime
 from typing import Any, Dict, List, Sequence, Union
-import sys
-import h5py
 import torch
 import algo.d3rlpy as d3rlpy
-import gymnasium
 import numpy as np
-from tqdm import tqdm
-import torch.nn as nn
-from envs.libero import LiberoEnv
-from algo.d3rlpy.dataset.components import Episode
-from algo.d3rlpy.models.encoders import EncoderFactory
 from algo.d3rlpy.logging import TensorboardAdapterFactory
-from algo.d3rlpy.algos.qlearning import QLearningAlgoBase
-from algo.d3rlpy.dataset import ReplayBuffer, InfiniteBuffer
-from algo.d3rlpy.dataset.types import Observation, ObservationSequence
-from algo.d3rlpy.dataset.mini_batch import TransitionMiniBatch, stack_observations, cast_recursively
-from algo.d3rlpy.dataset.transition_pickers import Transition, TransitionPickerProtocol, _validate_index, retrieve_observation, create_zero_observation
 import imagine_bench
-from imagine_bench.utils import LlataEpisode, LlataEncoder, LlataEncoderFactory, LlataTransition, LlataTransitionMiniBatch, LlataTransitionPicker, LlataReplayBuffer, make_d3rlpy_dataset
+from imagine_bench.utils import LlataEncoderFactory, make_d3rlpy_dataset
 from imagine_bench.evaluations import CallBack
 
 def get_args():
@@ -45,23 +30,7 @@ if __name__ == '__main__':
     args = get_args()
     env_name = args.env
     exp_name = args.env[:-3]
-    real_env = imagine_bench.make(env_name, level='real')
-    rephrase_env = imagine_bench.make(env_name, level='rephrase')
-    easy_env = imagine_bench.make(env_name, level='easy')
-    hard_env = imagine_bench.make(env_name, level='hard')
     level = args.ds_type
-    if level == "train":
-        env_dict = {"train": real_env, 
-                    'rephrase': rephrase_env,
-                    'easy': easy_env,
-                    'hard': hard_env}
-    elif level == 'rephrase':
-        env_dict = {"train": real_env, 
-                    'rephrase': rephrase_env}
-    elif level == 'easy':
-        env_dict = {'easy': easy_env}
-    elif level == 'hard':
-        env_dict = {'hard': hard_env}
 
     if level == "train":
         env = imagine_bench.make(env_name, level='real')
@@ -113,6 +82,22 @@ if __name__ == '__main__':
     json_log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "temp", "json_log", f"exp_{exp_num}")
     os.makedirs(json_log_dir, exist_ok=True)
     json_log_path = os.path.join(json_log_dir, f'{exp_name_temp}.json')
+    real_env = imagine_bench.make(env_name, level='real')
+    rephrase_env = imagine_bench.make(env_name, level='rephrase')
+    easy_env = imagine_bench.make(env_name, level='easy')
+    hard_env = imagine_bench.make(env_name, level='hard')
+    if level == "train":
+        env_dict = {"train": real_env, 
+                    'rephrase': rephrase_env,
+                    'easy': easy_env,
+                    'hard': hard_env}
+    elif level == 'rephrase':
+        env_dict = {"train": real_env, 
+                    'rephrase': rephrase_env}
+    elif level == 'easy':
+        env_dict = {'easy': easy_env}
+    elif level == 'hard':
+        env_dict = {'hard': hard_env}
     callback = CallBack()
     callback.add_eval_env(env_dict=env_dict, eval_num=args.eval_episodes, eval_json_save_path=json_log_dir)
     # offline training

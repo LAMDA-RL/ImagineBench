@@ -80,6 +80,11 @@ url2ds_name = {
     'https://box.nju.edu.cn/f/39741deb735843ddbeec/?dl=1': 'libero_imaginary_hard.npy',
     'https://box.nju.edu.cn/f/e1f3d5d9c7bb4fc78a2d/?dl=1': 'libero_imaginary_rephrase.npy',
     'https://box.nju.edu.cn/f/93ef16b8e2d64f5ea935/?dl=1': 'libero_real.npy',
+    # mujoco
+    'https://box.nju.edu.cn/f/dbf3a096b380460bb1b9/?dl=1': 'mujoco_imaginary_easy.npy',
+    'https://box.nju.edu.cn/f/f70e67f27c8d40d59568/?dl=1': 'mujoco_imaginary_hard.npy',
+    'https://box.nju.edu.cn/f/c53bc2307c6d49ea9b0b/?dl=1':'mujoco_imaginary_easy.npy',
+    'https://box.nju.edu.cn/f/44f5c558982e4dc3b5d5/?dl=1':'mujoco_real.npy',
 }
 
 

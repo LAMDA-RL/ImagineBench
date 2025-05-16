@@ -1,8 +1,8 @@
-import d3rlpy
+import algo.d3rlpy as d3rlpy
 import imagine_bench
 from imagine_bench.utils import LlataEncoderFactory, make_d3rlpy_dataset
 
-env = imagine_bench.make('Mujoco-v0', level='rephrase')
+env = imagine_bench.make('Libero-v0', level='rephrase')
 real_data, imaginary_rollout_rephrase = env.get_dataset(level="rephrase") 
 dataset = make_d3rlpy_dataset(real_data, imaginary_rollout_rephrase)
 

@@ -8,20 +8,20 @@ from typing import Any, Dict, List, Sequence, Union
 import sys
 import h5py
 import torch
-import d3rlpy
+import algo.d3rlpy as d3rlpy
 import gymnasium
 import numpy as np
 from tqdm import tqdm
 import torch.nn as nn
 from envs.mujoco import MujocoEnv
-from d3rlpy.dataset.components import Episode
-from d3rlpy.models.encoders import EncoderFactory
-from d3rlpy.logging import TensorboardAdapterFactory
-from d3rlpy.algos.qlearning import QLearningAlgoBase
-from d3rlpy.dataset import ReplayBuffer, InfiniteBuffer
-from d3rlpy.dataset.types import Observation, ObservationSequence
-from d3rlpy.dataset.mini_batch import TransitionMiniBatch, stack_observations, cast_recursively
-from d3rlpy.dataset.transition_pickers import Transition, TransitionPickerProtocol, _validate_index, retrieve_observation, create_zero_observation
+from algo.d3rlpy.dataset.components import Episode
+from algo.d3rlpy.models.encoders import EncoderFactory
+from algo.d3rlpy.logging import TensorboardAdapterFactory
+from algo.d3rlpy.algos.qlearning import QLearningAlgoBase
+from algo.d3rlpy.dataset import ReplayBuffer, InfiniteBuffer
+from algo.d3rlpy.dataset.types import Observation, ObservationSequence
+from algo.d3rlpy.dataset.mini_batch import TransitionMiniBatch, stack_observations, cast_recursively
+from algo.d3rlpy.dataset.transition_pickers import Transition, TransitionPickerProtocol, _validate_index, retrieve_observation, create_zero_observation
 
 
 @dataclasses.dataclass(frozen=True)

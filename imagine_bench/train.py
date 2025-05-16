@@ -3,6 +3,7 @@ import random
 import argparse
 from datetime import datetime
 from typing import Any, Dict, List, Sequence, Union
+
 import torch
 import algo.d3rlpy as d3rlpy
 import numpy as np
@@ -36,7 +37,6 @@ if __name__ == '__main__':
         env = imagine_bench.make(env_name, level='real')
     else:
         env = imagine_bench.make(env_name, level=level)
-
     if level == "train":
         real_data, imaginary_rollout = env.get_dataset(level="rephrase") 
         dataset = make_d3rlpy_dataset(real_data, None)

@@ -5,3 +5,6 @@ __pycache__
 /imagine_bench/envs/data
 !/imagine_bench/envs/data/meta_instructions_encoding.npy
 !/imagine_bench/envs/data/noisy_state_test.npy
+/runs/
+/temp/
+d3rlpy_logs

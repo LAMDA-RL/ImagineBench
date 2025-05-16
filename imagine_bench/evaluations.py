@@ -16,7 +16,7 @@ class CallBack():
         self.eval_json_save_path = eval_json_save_path
     def EvalCallback(self, agent: QLearningAlgoBase, epoch: int, total_step: int):
         for test_level, env in self.env_dict.items():
-            obs = env.reset()
+            obs, _ = env.reset()
 
             traj_reward = 0
             traj_len = 0
@@ -29,7 +29,8 @@ class CallBack():
             while True:
                 action = agent.predict(obs[np.newaxis, ...])
                 action = action[0]
-                obs, reward, done, info = env.step(action)
+                obs, reward, terminated, truncated, info = env.step(action)
+                done = terminated or truncated
                 traj_reward += reward
                 traj_len += 1
 
@@ -43,7 +44,7 @@ class CallBack():
                     if len(succ_list) == self.env_num:
                         break
                     else:
-                        obs = env.reset()
+                        obs, _ = env.reset()
                         traj_reward = 0
                         traj_len = 0
             pbar.close()

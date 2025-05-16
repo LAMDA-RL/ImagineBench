@@ -1,6 +1,6 @@
+import os
 import argparse
 import subprocess
-import sys
 
 def main():
     parser = argparse.ArgumentParser()
@@ -12,15 +12,15 @@ def main():
     parser.add_argument("--eval_episodes", type=int, default=10)
     args = parser.parse_args()
     if args.env == 'Ball-v0':
-        cmd = ['python', 'train1.py', '--algo', args.algo, '--env', args.env, '--ds_type', args.ds_type, '--device', args.device, '--seed', args.seed, '--eval_episodes', args.eval_episodes]
+        cmd = ['python', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'train_ball.py'), '--algo', args.algo, '--env', args.env, '--ds_type', args.ds_type, '--device', args.device, '--seed', str(args.seed)]
     elif args.env == 'MetaWorld-v0':
-        cmd = ['python', 'train1.py', '--algo', args.algo, '--env', args.env, '--ds_type', args.ds_type, '--device', args.device, '--seed', args.seed, '--eval_episodes', args.eval_episodes]
+        cmd = ['python', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'train_meta.py'), '--algo', args.algo, '--env', args.env, '--ds_type', args.ds_type, '--device', args.device, '--seed', str(args.seed)]
     elif args.env == 'BabyAI-v0':
-        cmd = ['python', 'train1.py', '--algo', args.algo, '--env', args.env, '--ds_type', args.ds_type, '--device', args.device, '--seed', args.seed, '--eval_episodes', args.eval_episodes]
+        cmd = ['python', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'train_babyai.py'), '--algo', args.algo, '--env', args.env, '--ds_type', args.ds_type, '--device', args.device, '--seed', str(args.seed), '--eval_episodes', str(args.eval_episodes)]
     elif args.env == 'Libero-v0':
-        cmd = ['python', 'train.py', '--algo', args.algo, '--env', args.env, '--ds_type', args.ds_type, '--device', args.device, '--seed', args.seed, '--eval_episodes', args.eval_episodes]
+        cmd = ['python', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'train.py'), '--algo', args.algo, '--env', args.env, '--ds_type', args.ds_type, '--device', args.device, '--seed', str(args.seed), '--eval_episodes', str(args.eval_episodes)]
     elif args.env == 'Mujoco-v0':
-        cmd = ['python', 'train.py', '--algo', args.algo, '--env', args.env, '--ds_type', args.ds_type, '--device', args.device, '--seed', args.seed, '--eval_episodes', args.eval_episodes]
+        cmd = ['python', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'train.py'), '--algo', args.algo, '--env', args.env, '--ds_type', args.ds_type, '--device', args.device, '--seed', str(args.seed), '--eval_episodes', str(args.eval_episodes)]
 
     # 调用对应的脚本
     subprocess.run(cmd)

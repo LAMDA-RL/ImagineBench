@@ -5,30 +5,33 @@ with Large Language Model Rollouts</h1>
 
 ## Overview
 
-A benchmark for evaluating reinforcement learning algorithms that train the policies using both **real data** and **imaginary rollouts from LLMs**. The concept of imaginary rollouts was proposed by [KALM](https://openreview.net/forum?id=tb1MlJCY5g) (NeurIPS 2024), which focuses on extracting knowledge from LLMs, in the form of environmental rollouts, to improve RL policies' performance on novel tasks. Please check the paper for more details.
+A benchmark for evaluating reinforcement learning algorithms that train the policies using both **real data** and **imaginary rollouts from LLMs**. The concept of imaginary rollouts was proposed by [KALM](https://openreview.net/forum?id=tb1MlJCY5g) (NeurIPS 2024), which focuses on extracting knowledge from LLMs, in the form of environmental rollouts, to improve RL policies' performance on novel tasks. 
+Please check [the paper for ImagineBench](https://arxiv.org/abs/2505.10010v1) for more details.
 
 **Core focus**: Measuring how well agents can learn effective policies through LLM's imaginary rollouts and generalize well on novel tasks.
 
 
 ## 📢 News
+- **May 15, 2025**: The paper about ImagineBench is accessible at [arXiv](https://arxiv.org/abs/2505.10010v1).
+- **May 14, 2025**: Add MuJoCo (HalfCheetah) environment to the benchmark, focusing on robotics locomotion.
 - **Apr 3, 2025**: Add BabyAI and LIBERO environments to the benchmark.
 - **Mar 31, 2025**: Initial release of datasets for CLEVR-Robot and Meta-World and the environments with Gymnasium wrapper.
 
 
 ## Dataset Status
 
-**Now Available!**  
 
-We have released initial datasets for 4 environments: [CLEVR-Robot](https://github.com/google-research/clevr_robot_env), [Meta-World](https://github.com/Farama-Foundation/Metaworld), [BabyAI](https://github.com/mila-iqia/babyai) and [LIBERO](https://github.com/Lifelong-Robot-Learning/LIBERO) with both real+LLM-generated rollouts.
+We have released initial datasets for diverse environments, with both real+LLM-generated rollouts.
 More environments and tasks are under active development.
 
 ### Available Environments
-| Environment | Training tasks                                                      | Novel tasks                                                                                        | LLM Sources |
-|-------------|---------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|-------------|
-| CLEVR-Robot | move A ball to one direction of B ball                              | unseen tasks such as "gather all the balls together" and "arrange the balls in a line"             | llama2      |
-| Meta-World  | ten different tasks provided by Meta-world benchmark                | manipulation under the assumption that the agent is facing a wall / combination of training skills | llama2      |
-| BabyAI      | 7x7 Grid world with task like "goto", "putnext" and "open the door" | novel combination and extension of the training skills                                             | llama2      |
-| LIBERO      | robotic manipulation involving pick and place                       | sequential pick and place / manipulation under the assumption of unsafe factors                    | llama2      |
+| Environment | Training tasks                                                  | Novel tasks                                                                                        |
+|-------------|-----------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
+| CLEVR-Robot | move A ball to one direction of B ball                          | unseen tasks such as "gather all the balls together" and "arrange the balls in a line"             |
+| Meta-World  | ten different tasks provided by Meta-world benchmark            | manipulation under the assumption that the agent is facing a wall / combination of training skills |
+| BabyAI      | 7x7 Grid world with task like "goto", "putnext" and "open the door" | novel combination and extension of the training skills                                             |
+| LIBERO      | robotic manipulation involving pick and place                   | sequential pick and place / manipulation under the assumption of unsafe factors                    |
+| MuJoCo      | robotic locomotion involving running forward/backward    | sequential run forward and backward / jump in place                                                |
 
 ---
 

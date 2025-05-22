@@ -300,7 +300,6 @@ class MetaWorldEnv:
         return policy_obs
 
     def reset(self, **kwargs):
-        self.level = kwargs.get('level', 'real')
         if self.ptr is None:
             self.ptr = 0
         else:
@@ -322,6 +321,7 @@ class MetaWorldEnv:
         curr_env = self.env_list[self.ptr]
 
         next_obs, reward, terminated, truncated, info = curr_env.step(action)
+        terminated = terminated or bool(info['success'])
 
         return self.get_policy_obs(obs=next_obs), reward, terminated, truncated, info
      

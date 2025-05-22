@@ -2,15 +2,16 @@ import os
 import random
 import argparse
 from datetime import datetime
-from typing import Any, Dict, List, Sequence, Union
 
 import torch
-import algo.d3rlpy as d3rlpy
 import numpy as np
-from algo.d3rlpy.logging import TensorboardAdapterFactory
+
 import imagine_bench
-from imagine_bench.utils import LlataEncoderFactory, make_d3rlpy_dataset
-from imagine_bench.evaluations import CallBack
+import algo.d3rlpy as d3rlpy
+from evaluations import CallBack
+from algo.d3rlpy.logging import TensorboardAdapterFactory
+from utils import LlataEncoderFactory, make_d3rlpy_dataset
+
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -27,11 +28,13 @@ def get_args():
 
     return args
 
+
 if __name__ == '__main__':
     args = get_args()
     env_name = args.env
     exp_name = args.env[:-3]
     level = args.ds_type
+    discrete_action = True if env_name in ['BabyAI-v0', 'Ball-v0'] else False
 
     if level == "train":
         env = imagine_bench.make(env_name, level='real')
@@ -50,38 +53,58 @@ if __name__ == '__main__':
     torch.cuda.manual_seed_all(args.seed)
     torch.backends.cudnn.deterministic = True
 
-    if args.algo == 'bc':
-        agent = d3rlpy.algos.BCConfig(
-            encoder_factory=LlataEncoderFactory(feature_size=256, hidden_size=256),
-        ).create(device=args.device)
-    elif args.algo == 'cql':
-        agent = d3rlpy.algos.CQLConfig(
-            actor_encoder_factory=LlataEncoderFactory(feature_size=256, hidden_size=256),
-            critic_encoder_factory=LlataEncoderFactory(feature_size=256, hidden_size=256),
-        ).create(device=args.device)
-    elif args.algo == 'bcq':
-        agent = d3rlpy.algos.BCQConfig(
-            actor_encoder_factory=LlataEncoderFactory(feature_size=256, hidden_size=256),
-            critic_encoder_factory=LlataEncoderFactory(feature_size=256, hidden_size=256),
-        ).create(device=args.device)
-    elif args.algo == 'td3+bc':
-        alg_hyper_list = [
-        ]
-        agent = d3rlpy.algos.TD3PlusBCConfig(
-            actor_encoder_factory=LlataEncoderFactory(feature_size=256, hidden_size=256),
-            critic_encoder_factory=LlataEncoderFactory(feature_size=256, hidden_size=256),
-        ).create(device=args.device)
+    if not discrete_action:
+        if args.algo == 'bc':
+            agent = d3rlpy.algos.BCConfig(
+                encoder_factory=LlataEncoderFactory(feature_size=256, hidden_size=256),
+            ).create(device=args.device)
+        elif args.algo == 'cql':
+            agent = d3rlpy.algos.CQLConfig(
+                actor_encoder_factory=LlataEncoderFactory(feature_size=256, hidden_size=256),
+                critic_encoder_factory=LlataEncoderFactory(feature_size=256, hidden_size=256),
+            ).create(device=args.device)
+        elif args.algo == 'bcq':
+            agent = d3rlpy.algos.BCQConfig(
+                actor_encoder_factory=LlataEncoderFactory(feature_size=256, hidden_size=256),
+                critic_encoder_factory=LlataEncoderFactory(feature_size=256, hidden_size=256),
+            ).create(device=args.device)
+        elif args.algo == 'td3+bc':
+            alg_hyper_list = [
+            ]
+            agent = d3rlpy.algos.TD3PlusBCConfig(
+                actor_encoder_factory=LlataEncoderFactory(feature_size=256, hidden_size=256),
+                critic_encoder_factory=LlataEncoderFactory(feature_size=256, hidden_size=256),
+            ).create(device=args.device)
+        else:
+            raise NotImplementedError
     else:
-        raise NotImplementedError
+        f_size = 64 if env_name == 'BabyAI-v0' else 256
+        if args.algo == 'bc':
+            agent = d3rlpy.algos.DiscreteBCConfig(
+                encoder_factory=LlataEncoderFactory(feature_size=f_size, hidden_size=f_size),
+            ).create(device=args.device)
+        elif args.algo == 'cql':
+            agent = d3rlpy.algos.DiscreteCQLConfig(
+                encoder_factory=LlataEncoderFactory(feature_size=f_size, hidden_size=f_size),
+                alpha=10.0,
+            ).create(device=args.device)
+        elif args.algo == 'bcq':
+            agent = d3rlpy.algos.DiscreteBCQConfig(
+                encoder_factory=LlataEncoderFactory(feature_size=f_size, hidden_size=f_size),
+            ).create(device=args.device)
+        elif args.algo == 'sac':
+            agent = d3rlpy.algos.DiscreteSACConfig(
+                actor_encoder_factory=LlataEncoderFactory(feature_size=f_size, hidden_size=f_size),
+                critic_encoder_factory=LlataEncoderFactory(feature_size=f_size, hidden_size=f_size),
+            ).create(device=args.device)
+        else:
+            raise NotImplementedError
+    
     kwargs = vars(args)    
-    exp_name = f'{exp_name}_{"i-" if level != "train" else ""}{kwargs["ds_type"].replace("_level", "")}'
+    exp_name = f'{exp_name}_{"i-" if level != "train" else ""}{kwargs["ds_type"]}'
     exp_name_temp = f'{exp_name}_{kwargs["algo"]}_seed{kwargs["seed"]}'
     exp_name = f'{exp_name_temp}_{datetime.now().strftime("%m-%d_%H-%M-%S")}'
 
-    exp_num = 0
-    json_log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "temp", "json_log", f"exp_{exp_num}")
-    os.makedirs(json_log_dir, exist_ok=True)
-    json_log_path = os.path.join(json_log_dir, f'{exp_name_temp}.json')
     real_env = imagine_bench.make(env_name, level='real')
     rephrase_env = imagine_bench.make(env_name, level='rephrase')
     easy_env = imagine_bench.make(env_name, level='easy')
@@ -99,7 +122,8 @@ if __name__ == '__main__':
     elif level == 'hard':
         env_dict = {'hard': hard_env}
     callback = CallBack()
-    callback.add_eval_env(env_dict=env_dict, eval_num=args.eval_episodes, eval_json_save_path=json_log_path)
+    callback.add_eval_env(env_dict=env_dict, eval_num=args.eval_episodes)
+
     # offline training
     agent.fit(
         dataset=dataset,

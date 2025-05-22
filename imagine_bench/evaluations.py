@@ -1,20 +1,21 @@
-import os
-import json
-from typing import Any, Dict, List, Sequence, Union
-import algo.d3rlpy as d3rlpy
+from typing import Dict
+
 import numpy as np
 from tqdm import tqdm
+
+from envs import RIMAROEnv
 from algo.d3rlpy.algos.qlearning import QLearningAlgoBase
 
 
 class CallBack():
     def __init__(self):
-        self.env_dict = None
-    def add_eval_env(self, env_dict, eval_num, eval_json_save_path=None):
+        self.env_dict: Dict[str, RIMAROEnv] = None
+    
+    def add_eval_env(self, env_dict: Dict[str, RIMAROEnv], eval_num: int) -> None:
         self.env_dict = env_dict
         self.env_num = eval_num
-        self.eval_json_save_path = eval_json_save_path
-    def EvalCallback(self, agent: QLearningAlgoBase, epoch: int, total_step: int):
+    
+    def EvalCallback(self, agent: QLearningAlgoBase, epoch: int, total_step: int) -> None:
         for test_level, env in self.env_dict.items():
             obs, _ = env.reset()
 
@@ -35,7 +36,7 @@ class CallBack():
                 traj_len += 1
 
                 if done:
-                    succ_list.append(1 if info['success'] else 0)
+                    succ_list.append(1 if info['is_success'] else 0)
                     reward_list.append(traj_reward)
                     traj_len_list.append(traj_len)
                     
@@ -53,18 +54,3 @@ class CallBack():
             agent.logger.add_metric(f'eval/{test_level}_succ', np.mean(succ_list))
             agent.logger.add_metric(f'eval/{test_level}_reward', np.mean(reward_list))
             agent.logger.add_metric(f'eval_len/{test_level}_len', np.mean(traj_len_list))
-            if self.eval_json_save_path is not None:
-                if os.path.exists(self.eval_json_save_path):
-                    with open(self.eval_json_save_path, 'r') as f:
-                        data = json.load(f)
-                else:
-                    data = {}
-                data: Dict[str, Dict[int, float]]
-                
-                if test_level in data.keys():
-                    data[test_level][epoch] = np.mean(succ_list)
-                else:
-                    data[test_level] = {epoch: np.mean(succ_list)}
-                
-                with open(self.eval_json_save_path, 'w') as f:
-                    json.dump(data, f)

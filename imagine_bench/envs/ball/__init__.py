@@ -1,19 +1,26 @@
 import os
 import sys
-import h5py
+import random
 import urllib.request
+from typing import List
+from operator import itemgetter
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent))
+
+import h5py
+import gym.spaces
 import numpy as np
+import gym.spaces.box
+
 from envs import DATASET_PATH, LEVEL_LIST, RIMAROEnv, download_dataset_from_url, show_progress
 from clevr_robot_env import LlataEnv
-from clevr_utils import terminal_fn_with_level, CLEVR_QPOS_OBS_INDICES
+from clevr_utils import terminal_fn_with_level, CLEVR_QPOS_OBS_INDICES, compute_tau_reward_arr, compute_task_reward_arr
 
 
 level2true_level = {
     'real': 'tau_level',
     'rephrase': 'tau_level',
-    'easy': 'step_level',
+    'easy': 'step_level_a',
     'hard': 'task_level',
 }
 
@@ -33,12 +40,12 @@ class BallEnv(RIMAROEnv, LlataEnv):
         self.path_dict = {}
         # self.init_dataset()
         
-        self.path_dict['real_npy'] = download_dataset_from_url(self.dataset_url_dict['real_npy'])
-        real_data = np.load(self.path_dict['real_npy'], allow_pickle=True).item()
-        self.real_data_info = {
-            'instructions': real_data['instructions'],
-            'goals': real_data['goals'],
-        }
+        # self.path_dict['real_npy'] = download_dataset_from_url(self.dataset_url_dict['real_npy'])
+        # real_data = np.load(self.path_dict['real_npy'], allow_pickle=True).item()
+        # self.real_data_info = {
+        #     'instructions': real_data['instructions'],
+        #     'goals': real_data['goals'],
+        # }
         # self.imaginary_data_info = {}
         # imaginary_rephrase_data = np.load(self.path_dict['imaginary_rephrase_npy'], allow_pickle=True).item()
         # self.imaginary_data_info['rephrase_level'] = {
@@ -55,6 +62,16 @@ class BallEnv(RIMAROEnv, LlataEnv):
         #     'instructions': imaginary_hard_data['instructions'],
         #     'goals': imaginary_hard_data['goals'],
         # }
+
+        self.prepare_test()
+
+        data = np.load(DATASET_PATH.joinpath(f'clevr_test_{self.level+"_level" if self.level != "real" else "baseline"}.npy'), allow_pickle=True).item()
+        self.observations: List[np.ndarray] = itemgetter("observations")(data)
+        self.instructions = itemgetter("instructions")(data)
+        self.goals: List[np.ndarray] = data["goals"] if "goals" in data else None
+
+        self.inst_encoding = self.observations[0][0][2 * self.num_object:]
+
         LlataEnv.__init__(
             self,
             maximum_episode_steps=self.max_episode_steps,
@@ -65,56 +82,102 @@ class BallEnv(RIMAROEnv, LlataEnv):
             direct_obs=True,
             use_camera=False,
         )
+
+        new_image_space = gym.spaces.Box(
+            low=gym.spaces.box.get_inf(self.observations[0].dtype, sign='-'),
+            high=gym.spaces.box.get_inf(self.observations[0].dtype, sign='+'),
+            shape=(778, ),
+            dtype=self.observations[0].dtype,
+        )
+
+        self.observation_space = new_image_space
         
     def reset(self, **kwargs):
-        self.level = kwargs.get('level', 'real')
-
+        self.ptr = random.randint(0, len(self.observations) - 1)
+        obss = self.observations[self.ptr]
+        
         obs = LlataEnv.reset(self, **kwargs)
-        info = {}
+        init_env_obs = obss[0][:2 * self.num_object]
+        self.inst_encoding = obss[0][2 * self.num_object:]
+        qpos, qvel = self.physics.data.qpos.copy(), self.physics.data.qvel.copy()
+        qpos[CLEVR_QPOS_OBS_INDICES(self.num_object)] = init_env_obs
+        self.set_state(qpos, qvel)
 
-        qpos = self.physics.data.qpos.copy()
-        init_env_obs = qpos[CLEVR_QPOS_OBS_INDICES(self.num_object)]
         self.hist_obs_list = [init_env_obs]
 
-        if self.ptr is None:
-            self.ptr = 0
-        else:
-            self.ptr = (self.ptr + 1) % len(self.real_data_info['goals'])
-        self.goal_arr = self.real_data_info['goals'][self.ptr]
-        self.timestep = 0
+        obs = self.get_obs()
+        env_obs = obs[:2 * self.num_object]
+        policy_obs = np.r_[env_obs, self.inst_encoding]
 
-        return obs, info
+        self.timestep = 0
+        self.prev_completed_goal_cnt = 0
+
+        if len(self.goals[self.ptr].shape) == 2:
+            self.single_goal = self.goals[self.ptr][0]
+        elif len(self.goals[self.ptr].shape) == 1:
+            self.single_goal = self.goals[self.ptr]
+        else:
+            raise NotImplementedError
+
+        return policy_obs, {}
 
     def step(self, action):
+        pre_env_obs = self.get_obs()[:2 * self.num_object]
         next_obs, reward, done, info = LlataEnv.step(self, action)
+        env_obs = self.get_obs()[:2 * self.num_object]
 
         true_level = level2true_level[self.level]
-        terminal_kwargs = dict(
-            insts=None,
-            observations=np.array([next_obs]),
-            number_of_objects=self.num_object,
-            goals=np.array([self.goal_arr]),
-            level=true_level,
-        )
         if self.hist_obs_list is None:
             eval_result = {
                 'done': False,
+                'success': np.array([False]),
             }
         else:
+            terminal_kwargs = dict(
+                insts=None,
+                observations=np.array([next_obs]),
+                number_of_objects=self.num_object,
+                goals=np.array([self.single_goal]),
+                level=true_level,
+            )
+            self.hist_obs_list.append(env_obs)
             if 'step_level' in true_level:
                 terminal_kwargs['hist_observations'] = np.array(self.hist_obs_list).reshape(1, 2, 2 * self.num_object)
                 terminal_kwargs['actions'] = np.array([action]).reshape(1, -1)
             eval_result = terminal_fn_with_level(**terminal_kwargs)
-            qpos = self.physics.data.qpos.copy()
-            env_obs = qpos[CLEVR_QPOS_OBS_INDICES(self.num_object)]
-            self.hist_obs_list.append(env_obs)
 
         self.timestep += 1
 
         terminated = eval_result['done']
         trunated = self.timestep >= self.max_episode_steps
+        if info is not None:
+            info['is_success'] = bool(eval_result['success'].item())
+        else:
+            info = {'is_success': bool(eval_result['success'].item())}
 
-        return next_obs, reward, terminated, trunated, info
+        if self.hist_obs_list is None:
+            reward = 0.0
+        else:
+            if self.level in ['real', 'rephrase']:
+                reward = compute_tau_reward_arr(tau_obs_arr=pre_env_obs[np.newaxis, ...], tau_next_obs_arr=env_obs[np.newaxis, ...], goal_arr=self.single_goal, is_success=False)
+                reward = float(reward[0][0])
+            elif self.level == 'easy':
+                reward = 1.0 if info['is_success'] else 0.0
+            elif self.level == 'hard':
+                reward, self.prev_completed_goal_cnt = compute_task_reward_arr(
+                    tau_obs_arr=pre_env_obs[np.newaxis, ...],
+                    tau_next_obs_arr=env_obs[np.newaxis, ...],
+                    goal_arr=self.single_goal,
+                    is_success=False,
+                    prev_completed_goal_cnt=self.prev_completed_goal_cnt
+                    )
+                reward = float(reward[0][0])
+            else:
+                raise NotImplementedError
+        
+        policy_obs = np.r_[env_obs, self.inst_encoding]
+
+        return policy_obs, reward, terminated, trunated, info
     
     def init_dataset(self):
         if self.dataset_url_dict is None:
@@ -155,7 +218,7 @@ class BallEnv(RIMAROEnv, LlataEnv):
     
     def get_instruction(self):
         # 存在多条语义相同指令
-        instruction = np.random.choice(self.real_data_info['instructions'][self.ptr])
+        instruction = np.random.choice(self.data_info['instructions'][self.ptr])
 
         return instruction
     

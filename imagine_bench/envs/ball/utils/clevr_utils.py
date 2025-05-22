@@ -342,6 +342,91 @@ def single_obs_to_state(observation: np.ndarray):
         state[i*7+4 : i*7+7] = 0
     return state
 
+num_obj = 5
+
+def compute_dist(obs_arr: np.ndarray, goal_arr: np.ndarray) -> float:
+    reshaped_obs = obs_arr.reshape((num_obj, -1))
+    
+    goal_src_idx = np.where(goal_arr[:num_obj] == goal_src)[0].item()
+    goal_dst_idx = np.where(goal_arr[:num_obj] == goal_dst)[0].item()
+    
+    goal_src_xy = reshaped_obs[goal_src_idx]
+    goal_dst_xy = reshaped_obs[goal_dst_idx]
+    
+    dist = np.linalg.norm(goal_src_xy - goal_dst_xy).item()
+
+    return dist
+
+
+def compute_tau_reward_arr(tau_obs_arr: np.ndarray, tau_next_obs_arr: np.ndarray, goal_arr: np.ndarray, is_success: bool) -> np.ndarray:
+    success_reward = 100
+    dist_scale = 10
+    tau_reward_list = []
+    for step_idx in range(tau_obs_arr.shape[0]):
+        prev_dist = compute_dist(tau_obs_arr[step_idx], goal_arr)
+        curr_dist = compute_dist(tau_next_obs_arr[step_idx], goal_arr)
+        reward = (prev_dist - curr_dist) * dist_scale
+        tau_reward_list.append(reward)
+    # Hard code the reward of final step
+    if is_success:
+        tau_reward_list[-1] = success_reward
+
+    tau_reward_arr = np.array(tau_reward_list).reshape(-1, 1)
+
+    return tau_reward_arr
+
+
+def compute_task_reward_arr(tau_obs_arr: np.ndarray, tau_next_obs_arr: np.ndarray, goal_arr: np.ndarray, is_success: bool, prev_completed_goal_cnt: int) -> np.ndarray:
+    success_reward = 100
+    subgoal_reward = 10
+
+    dist = 0.13 * 2.5
+    order_target_diff_arr = np.array([dist, 0.0])
+    norm_order_target_diff_arr = order_target_diff_arr / np.linalg.norm(order_target_diff_arr)
+    order_max_error_angle = np.pi / 6
+    sort_cycle_r = dist
+
+    tau_reward_list = []
+    goal_indicate = int(goal_arr[num_obj])
+    curr_completed_goal_cnt = 0
+    for step_idx in range(tau_obs_arr.shape[0]):
+        curr_env_obs = tau_obs_arr[step_idx][:2 * num_obj]
+        # prev_completed_goal_cnt = curr_completed_goal_cnt
+        if goal_indicate in [TAU_2, TAU_3]:
+            if int(goal_indicate) == TAU_2:
+                all_goal_arr = goal_arr[num_obj + 1: (num_obj + 1) * (2 + 1)].reshape(-1, num_obj + 1)
+            elif int(goal_indicate) == TAU_3:
+                all_goal_arr = goal_arr[num_obj + 1: (num_obj + 1) * (3 + 1)].reshape(-1, num_obj + 1)
+            else:
+                raise NotImplementedError
+            curr_completed_goal_cnt = np.sum([_success(num_obj, curr_env_obs.reshape(1, -1), single_goal_arr.reshape(1, -1)).item() for single_goal_arr in all_goal_arr])
+        elif goal_indicate == ORDER:
+            diff_arr = np.diff(curr_env_obs.reshape((num_obj, -1)), axis=0)
+            norm_diff_arr = diff_arr / np.linalg.norm(diff_arr, axis=1).reshape(-1, 1)
+            diff_dot_arr = np.dot(norm_diff_arr, norm_order_target_diff_arr)
+            completed_flag_arr = diff_dot_arr >= np.cos(order_max_error_angle)
+            curr_completed_goal_cnt = completed_flag_arr.sum()
+        elif goal_indicate == SORT:
+            obs_xy_arr = curr_env_obs.reshape((num_obj, -1))
+            cycle_center = obs_xy_arr[2]
+            dist_list = []
+            other_idx_list = [0, 1, 3, 4]
+            for other_idx in other_idx_list:
+                dist = np.linalg.norm(cycle_center - obs_xy_arr[other_idx])
+                dist_list.append(dist)
+            curr_completed_goal_cnt = (np.array(dist_list) < sort_cycle_r).sum()
+        else:
+            raise NotImplementedError
+        step_reward = subgoal_reward * (curr_completed_goal_cnt - prev_completed_goal_cnt)
+        tau_reward_list.append(step_reward)
+
+    if is_success:
+        tau_reward_list[-1] = success_reward
+
+    tau_reward_arr = np.array(tau_reward_list).reshape(-1, 1)
+
+    return tau_reward_arr, curr_completed_goal_cnt
+
 
 if __name__ == "__main__":
     from operator import itemgetter

@@ -50,11 +50,11 @@ class BabyAIEnv(RIMAROEnv):
         
         self.path_dict = {}
 
-        # lky: for debug
-        self.path_dict['real'] = '/mnt/data/lky/data/RIMRO/babyai_real.npy'
+        # for test
+        # self.path_dict['real'] = '/mnt/data/lky/data/RIMRO/babyai_real.npy'
         # self.path_dict['rephrase'] = '/mnt/data/lky/data/RIMRO/babyai_rephrase.npy'
-        self.path_dict['easy'] = '/mnt/data/lky/data/RIMRO/babyai_easy.npy'
-        self.path_dict['hard'] = '/mnt/data/lky/data/RIMRO/babyai_hard.npy'
+        # self.path_dict['easy'] = '/mnt/data/lky/data/RIMRO/babyai_easy.npy'
+        # self.path_dict['hard'] = '/mnt/data/lky/data/RIMRO/babyai_hard.npy'
 
     def reset(self, **kwargs):
         return self.env.reset(**kwargs)

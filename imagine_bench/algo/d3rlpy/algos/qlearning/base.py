@@ -19,6 +19,9 @@ import torch
 from tqdm.auto import tqdm, trange
 from typing_extensions import Self
 
+import os
+from pathlib import Path
+
 from ...base import ImplBase, LearnableBase, LearnableConfig, save_config
 from ...constants import IMPL_NOT_INITIALIZED_ERROR, ActionSpace
 from ...dataset import (
@@ -463,11 +466,9 @@ class QLearningAlgoBase(
         Returns:
             Iterator yielding current epoch and metrics dict.
         """
-        from pathlib import Path
-        offline_save_dir = Path('/home/yangsh/world_model_rl/llm_agent/d3rlpy_logs/')
-        import os
+
         offline_save_dir = Path(os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))),
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))),
             'd3rlpy_logs'
             ))
         exp_dir = offline_save_dir.joinpath(experiment_name)

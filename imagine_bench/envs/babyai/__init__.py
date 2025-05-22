@@ -60,7 +60,9 @@ class BabyAIEnv(RIMAROEnv):
         return self.env.reset(**kwargs)
     
     def step(self, action: int):
-        return self.env.step(action)
+        obs, reward, terminated, truncated, info = self.env.step(action)
+        info['is_success'] = terminated
+        return obs, reward, terminated, truncated, info
     
     def get_dataset(self, level: str = 'rephrase') -> Tuple[Dict[str, np.ndarray], Union[Dict[str, np.ndarray], None]]:
         assert level in LEVEL_LIST, f'level should be in {LEVEL_LIST}, but got {self.level}'

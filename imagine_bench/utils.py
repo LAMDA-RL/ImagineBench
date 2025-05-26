@@ -213,7 +213,7 @@ def make_d3rlpy_dataset(real_data, imagine_data):
         )
     return dataset
 
-def make_offlinerl_dataset(real_data, imagine_data, real_step_len=100, imagine_step_len=100):
+def make_offlinerl_dataset(real_data, imagine_data, real_step_len=1, imagine_step_len=1):
     obs_list = []
     obs_next_list = []
     act_list = []

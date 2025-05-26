@@ -200,7 +200,7 @@ class HalfCheetahEnv(gym.Env):
         self.x_position = curr_x_position
         reward = self.get_reward(info)
         success = self.get_success()
-        info['success'] = success
+        info['is_success'] = success
         if success:
             terminated = True
         return obs, reward, terminated, truncated, info

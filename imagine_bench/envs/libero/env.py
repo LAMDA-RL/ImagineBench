@@ -268,9 +268,9 @@ class VectorLibero(gym.Env):
         self.img = obs["agentview_image"]
         done = terminated or truncated
         if terminated:
-            info['success'] = True
+            info['is_success'] = True
         else:
-            info['success'] = False
+            info['is_success'] = False
         return state, reward, terminated, truncated, info
     def render(self):
         return self.img

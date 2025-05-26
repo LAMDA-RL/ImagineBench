@@ -49,14 +49,13 @@ Please run the following commands in the given order to install the dependency f
 conda create -n imagine_bench python=3.10.13
 conda activate imagine_bench
 git clone git@github.com:LAMDA-RL/ImagineBench.git
-cd imagine_bench
+cd ImagineBench
 pip install -r requirements.txt
 ```
 Then install the ImagineBench package:
 ```
 pip install -e .
 ```
-If you want to use libero env, please install [LIBERO](https://github.com/Lifelong-Robot-Learning/LIBERO) first.
 ## Data in ImagineBench
 In ImagineBench, real data and imaginary data returned by `get_dataset()` function are `dict` with the same format, where **N** is # of trajectories and **T** is max trajectory length.
 

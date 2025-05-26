@@ -3,8 +3,8 @@ from gym import spaces
 import numpy as np
 import sys
 import os
-from Libero.libero.envs import OffScreenRenderEnv
-from Libero.libero import benchmark
+from libero.libero import benchmark
+from libero.libero.envs import OffScreenRenderEnv
 import random
 import matplotlib.pyplot as plt
 from gymnasium import Env, Wrapper

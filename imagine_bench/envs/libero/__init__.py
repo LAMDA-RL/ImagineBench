@@ -4,8 +4,8 @@ import numpy as np
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ".")))
-from Libero.libero.envs import OffScreenRenderEnv
-from Libero.libero import benchmark
+from libero.libero import benchmark
+from libero.libero.envs import OffScreenRenderEnv
 import random
 import matplotlib.pyplot as plt
 import cv2

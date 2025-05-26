@@ -22,7 +22,7 @@ from algo.d3rlpy.dataset import ReplayBuffer, InfiniteBuffer
 from algo.d3rlpy.dataset.types import Observation, ObservationSequence
 from algo.d3rlpy.dataset.mini_batch import TransitionMiniBatch, stack_observations, cast_recursively
 from algo.d3rlpy.dataset.transition_pickers import Transition, TransitionPickerProtocol, _validate_index, retrieve_observation, create_zero_observation
-
+from algo.offlinerl.utils.data import SampleBatch, get_scaler
 
 @dataclasses.dataclass(frozen=True)
 class LlataEpisode(Episode):
@@ -212,3 +212,52 @@ def make_d3rlpy_dataset(real_data, imagine_data):
             episodes=llata_episodes,
         )
     return dataset
+
+def make_offlinerl_dataset(real_data, imagine_data, real_step_len=100, imagine_step_len=100):
+    obs_list = []
+    obs_next_list = []
+    act_list = []
+    rew_list = []
+    done_list = []
+    for dataset in [real_data]:
+        if dataset is None:
+            continue
+
+        for traj_idx in range(0, dataset["observations"].shape[0], real_step_len):
+            for step in range(dataset["observations"].shape[1]-1):
+                obs_list.append(dataset["observations"][traj_idx][step])
+                obs_next_list.append(dataset["observations"][traj_idx][step+1])
+                act_list.append(dataset["actions"][traj_idx][step])
+                rew_list.append(dataset["rewards"][traj_idx][step])
+                if dataset["masks"][traj_idx][step] == 1 and dataset["masks"][traj_idx][step+1] == 1:
+                    done_list.append(False)
+                elif dataset["masks"][traj_idx][step] == 1 and dataset["masks"][traj_idx][step+1] == 0:
+                    done_list.append(True)
+                if dataset["masks"][traj_idx][step] == 0:
+                    break
+    print('data_num:', len(obs_list))
+    for dataset in [imagine_data]:
+        if dataset is None:
+            continue
+
+        for traj_idx in range(0, dataset["observations"].shape[0], imagine_step_len):
+            for step in range(dataset["observations"].shape[1]-1):
+                obs_list.append(dataset["observations"][traj_idx][step])
+                obs_next_list.append(dataset["observations"][traj_idx][step + 1])
+                act_list.append(dataset["actions"][traj_idx][step])
+                rew_list.append(dataset["rewards"][traj_idx][step])
+                if dataset["masks"][traj_idx][step] == 1 and dataset["masks"][traj_idx][step+1] == 1:
+                    done_list.append(False)
+                elif dataset["masks"][traj_idx][step] == 1 and dataset["masks"][traj_idx][step+1] == 0:
+                    done_list.append(True)
+                if dataset["masks"][traj_idx][step] == 0:
+                    break
+    print('data_num:', len(obs_list))
+    buffer = SampleBatch(
+        obs = torch.from_numpy(np.array(obs_list)).float().to("cuda:0"),  # shaped: N,dim
+        obs_next = torch.from_numpy(np.array(obs_next_list)).float().to("cuda:0"),  # shaped: N,dim
+        act = torch.from_numpy(np.array(act_list)).float().to("cuda:0"),  # shaped: N,dim
+        rew = torch.from_numpy(np.array(rew_list)).float().to("cuda:0"),  # shaped: N
+        done = torch.from_numpy(np.array(done_list)).float().to("cuda:0"),  # shaped: N
+    )
+    return buffer , len(obs_list)

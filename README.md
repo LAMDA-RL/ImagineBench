@@ -5,6 +5,8 @@ with Large Language Model Rollouts</h1>
 
 ## Overview
 
+![Overview of ImagineBench](./docs/overview.png)
+
 A benchmark for evaluating reinforcement learning algorithms that train the policies using both **real data** and **imaginary rollouts from LLMs**. The concept of imaginary rollouts was proposed by [KALM](https://openreview.net/forum?id=tb1MlJCY5g) (NeurIPS 2024), which focuses on extracting knowledge from LLMs, in the form of environmental rollouts, to improve RL policies' performance on novel tasks. 
 Please check [the paper for ImagineBench](https://arxiv.org/abs/2505.10010v1) for more details.
 
@@ -57,7 +59,7 @@ Then install the ImagineBench package:
 pip install -e .
 ```
 ## Data in ImagineBench
-In ImagineBench, real data and imaginary data returned by `get_dataset()` function are `dict` with the same format, where **N** is # of trajectories and **T** is max trajectory length.
+In ImagineBench, real- and imaginary-datasets returned by `get_dataset()` function are in `dict` type with the same format, where **N** is the number of rollouts and **T** is max trajectory length.
 
 - `observations`: An **(N, T, D)** array, where *D* is dim of observation space concatenated with instruction encoding.
 
@@ -69,9 +71,9 @@ In ImagineBench, real data and imaginary data returned by `get_dataset()` functi
 
 ## Basic usage
 
-**Training**
+**Offline RL Training with one line**
 
-To start offline RL training with imaginary rollouts, choose:
+To start offline RL training with imaginary rollouts, you can set:
 
 `ALGO` from `[bc, cql, bcq, td3+bc]`
 
@@ -96,7 +98,7 @@ env = imagine_bench.make('MetaWorld-v0', level='easy')
 real_data, imaginary_rollout_easy = env.get_dataset(level="easy")
 ```
 
-**Example for Offline RL Training with d3rlpy** 
+**Example for Offline RL Training with [d3rlpy](https://github.com/takuseno/d3rlpy) Repo** 
 ```python
 import algo.d3rlpy as d3rlpy
 from algo.d3rlpy.logging import TensorboardAdapterFactory
@@ -123,7 +125,7 @@ agent.fit(
     )
 ```
 
-**Example for Offline RL Training with offlinerl** 
+**Example for Offline RL Training with [OfflineRL](https://github.com/polixir/OfflineRL) Repo** 
 ```python
 import random
 import argparse
@@ -163,4 +165,23 @@ algo_trainer = algo_trainer_obj(algo_init, algo_config)
 callback = EvalCallBackFunction()
 callback.initialize({'train':env}, 10, writer)
 algo_trainer.train(train_buffer=dataset, val_buffer=None, callback_fn=callback)
+```
+
+
+## Citation
+
+Please cite the following paper if you use ImagineBench in your research:
+
+```
+@article{pang2025imaginebench,
+  title={ImagineBench: Evaluating Reinforcement Learning with Large Language Model Rollouts},
+  author={Jing-Cheng Pang and
+          Kaiyuan Li and
+          Yidi Wang and
+          Si-Hang Yang and 
+          Shengyi Jiang and 
+          Yang Yu},
+  journal={arXiv preprint arXiv:2505.10010},
+  year={2025}
+}
 ```

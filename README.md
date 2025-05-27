@@ -170,7 +170,7 @@ algo_trainer.train(train_buffer=dataset, val_buffer=None, callback_fn=callback)
 
 ## Citation
 
-Please cite the following paper if you use ImagineBench in your research:
+Please cite ImagineBench if you find this benchmark useful in your research:
 
 ```
 @article{pang2025imaginebench,

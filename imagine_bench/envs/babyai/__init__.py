@@ -50,12 +50,6 @@ class BabyAIEnv(RIMAROEnv):
         
         self.path_dict = {}
 
-        # for test
-        # self.path_dict['real'] = '/mnt/data/lky/data/RIMRO/babyai_real.npy'
-        # self.path_dict['rephrase'] = '/mnt/data/lky/data/RIMRO/babyai_rephrase.npy'
-        # self.path_dict['easy'] = '/mnt/data/lky/data/RIMRO/babyai_easy.npy'
-        # self.path_dict['hard'] = '/mnt/data/lky/data/RIMRO/babyai_hard.npy'
-
     def reset(self, **kwargs):
         return self.env.reset(**kwargs)
     
@@ -64,40 +58,20 @@ class BabyAIEnv(RIMAROEnv):
         info['is_success'] = terminated
         return obs, reward, terminated, truncated, info
     
-    def get_dataset(self, level: str = 'rephrase') -> Tuple[Dict[str, np.ndarray], Union[Dict[str, np.ndarray], None]]:
-        assert level in LEVEL_LIST, f'level should be in {LEVEL_LIST}, but got {self.level}'
+    def get_dataset(self, level: str = 'rephrase', data_model: str = 'llama2') -> Tuple[Dict[str, np.ndarray], Union[Dict[str, np.ndarray], None]]:
+        real_dataset, imaginary_level_dataset = super().get_dataset(level=level, data_model=data_model)
 
-        if 'real' not in self.path_dict.keys():
-            self.path_dict['real'] = download_dataset_from_url(self.dataset_url_dict['real'])
-        real_dataset_path = self.path_dict['real']
-        np_data = np.load(real_dataset_path, allow_pickle=True).item()
-        encoding = np.array([self.env.inst2encode[inst[0]] for inst in np_data['instructions']])
-        observations: np.ndarray = np_data['observations']
+        encoding = np.array([self.env.inst2encode[inst[0]] for inst in real_dataset['instructions']])
+        observations: np.ndarray = real_dataset['observations']
         encoding = encoding[:, np.newaxis, :].repeat(observations.shape[1], axis=1)
         observations = np.concatenate([observations, encoding], axis=-1)
-        real_dataset = {
-                'masks': np_data['masks'][:],
-                'observations': observations,
-                'actions': np_data['actions'][:],
-                'rewards': np_data['rewards'][:],
-            }
+        real_dataset['observations'] = observations
         
         if level != 'real':
-            if level not in self.path_dict.keys():
-                self.path_dict[level] = download_dataset_from_url(self.dataset_url_dict[f'{level}'])
-            imaginary_level_dataset_path = self.path_dict[level]
-            np_data = np.load(imaginary_level_dataset_path, allow_pickle=True).item()
-            encoding = np.array([self.env.inst2encode[inst[0]] for inst in np_data['instructions']])
-            observations: np.ndarray = np_data['observations']
+            encoding = np.array([self.env.inst2encode[inst[0]] for inst in imaginary_level_dataset['instructions']])
+            observations: np.ndarray = imaginary_level_dataset['observations']
             encoding = encoding[:, np.newaxis, :].repeat(observations.shape[1], axis=1)
             observations = np.concatenate([observations, encoding], axis=-1)
-            imaginary_level_dataset = {
-                'masks': np_data['masks'][:],
-                'observations': observations,
-                'actions': np_data['actions'][:],
-                'rewards': np_data['rewards'][:],
-            }
+            imaginary_level_dataset['observations'] = observations
 
-            return real_dataset, imaginary_level_dataset
-        else:
-            return real_dataset, None
+        return real_dataset, imaginary_level_dataset

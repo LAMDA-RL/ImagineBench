@@ -24,7 +24,7 @@ class MujocoEnv(RIMAROEnv):
             self.env_name_list = hard_level_mujoco_env_name_list.copy()
         else:
             raise NotImplementedError
-        # 一个level对应多个env
+        # one level has multiple envs
         self.env_list = []
         for env_name in self.env_name_list:
             eval_env = HalfCheetahEnv(env_name)
@@ -52,48 +52,29 @@ class MujocoEnv(RIMAROEnv):
         obs = np.concatenate([obs, self.inst_encode], axis=0)
         return obs, reward, terminated, truncated, info
 
-    def get_dataset(self, level='rephrase'):
-        self.level = level
+    def get_dataset(self, level: str = 'rephrase', data_model: str = 'llama2'):
+        real_dataset, imaginary_level_dataset = super().get_dataset(level=level, data_model=data_model)
 
-        if 'real' not in self.path_dict.keys():
-            self.path_dict['real'] = download_dataset_from_url(self.dataset_url_dict['real'])
-        real_dataset_path = self.path_dict['real']
-        np_data = np.load(real_dataset_path, allow_pickle=True).item()
-        masks = np_data['masks'][:]
-        observations = np_data['observations'][:]
-        actions = np_data['actions'][:]
-        rewards = np_data['rewards'][:]
-        instructions = np_data['instructions'][:]
+        observations = real_dataset['observations'][:]
+        instructions = real_dataset['instructions'][:]
         encoding = np.array([self.inst2encode[inst[0]] for inst in instructions])
         encoding = encoding[:, np.newaxis, :].repeat(observations.shape[1], axis=1)
         observations = np.concatenate([observations, encoding], axis=-1)
-        real_dataset = {
-            'masks': masks,
-            'observations': observations,
-            'actions': actions,
-            'rewards': rewards,
-        }
+        real_dataset['observations'] = observations
+        real_dataset.pop('instructions', None)
         
-        if self.level not in self.path_dict.keys():
-            self.path_dict[self.level] = download_dataset_from_url(self.dataset_url_dict[self.level])
-        imaginary_level_dataset_path = self.path_dict[self.level]
-        np_data = np.load(imaginary_level_dataset_path, allow_pickle=True).item()
-        masks = np_data['masks'][:]
-        observations = np_data['observations'][:]
-        actions = np_data['actions'][:]
-        rewards = np_data['rewards'][:]
-        instructions = np_data['instructions'][:]
-        encoding = np.array([self.inst2encode[inst[0]] for inst in instructions])
-        encoding = encoding[:, np.newaxis, :].repeat(observations.shape[1], axis=1)
-        observations = np.concatenate([observations, encoding], axis=-1)
-        imaginary_level_dataset = {
-            'masks': masks,
-            'observations': observations,
-            'actions': actions,
-            'rewards': rewards,
-        }
+        if level != 'real':
+            observations = imaginary_level_dataset['observations'][:]
+            instructions = imaginary_level_dataset['instructions'][:]
+            encoding = np.array([self.inst2encode[inst[0]] for inst in instructions])
+            encoding = encoding[:, np.newaxis, :].repeat(observations.shape[1], axis=1)
+            observations = np.concatenate([observations, encoding], axis=-1)
+            imaginary_level_dataset['observations'] = observations
+            imaginary_level_dataset.pop('instructions', None)
 
         return real_dataset, imaginary_level_dataset
+    
+
 if __name__ == "__main__":
     env = MujocoEnv(
         dataset_url_dict="none",

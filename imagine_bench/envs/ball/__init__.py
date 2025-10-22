@@ -36,7 +36,6 @@ class BallEnv(RIMAROEnv, LlataEnv):
         self.timestep = 0
         self.ptr = None
 
-        # 指令以及其余信息统一存为 npy, 数据集(obs, action, mask, reward)统一存为 h5
         self.path_dict = {}
         # self.init_dataset()
         
@@ -187,33 +186,10 @@ class BallEnv(RIMAROEnv, LlataEnv):
         for key, url in self.dataset_url_dict.items():
             self.path_dict[key] = download_dataset_from_url(url)
 
-    def get_dataset(self, **kwargs):
-        self.level = kwargs.get('level', 'rephrase')
-
-        assert self.level in LEVEL_LIST, f'level should be in {LEVEL_LIST}, but got {self.level}'
-
-        if 'real_h5' not in self.path_dict.keys():
-            self.path_dict['real_h5'] = download_dataset_from_url(self.dataset_url_dict['real_h5'])
-        real_dataset_path = self.path_dict['real_h5']
-        with h5py.File(real_dataset_path, 'r') as f:
-            real_dataset = {
-                'masks': f['masks'][:],
-                'observations': f['observations'][:],
-                'actions': f['actions'][:],
-                'rewards': f['rewards'][:],
-            }
-        
-        if f'imaginary_{self.level}_h5' not in self.path_dict.keys():
-            self.path_dict[f'imaginary_{self.level}_h5'] = download_dataset_from_url(self.dataset_url_dict[f'imaginary_{self.level}_h5'])
-        imaginary_level_dataset_path = self.path_dict[f'imaginary_{self.level}_h5']
-        with h5py.File(imaginary_level_dataset_path, 'r') as f:
-            imaginary_level_dataset = {
-                'masks': f['masks'][:],
-                'observations': f['observations'][:],
-                'actions': f['actions'][:],
-                'rewards': f['rewards'][:],
-            }
-        
+    def get_dataset(self, level: str = 'rephrase', data_model: str = 'llama2'):
+        real_dataset, imaginary_level_dataset = super().get_dataset(level=level, data_model=data_model)
+        real_dataset.pop('instructions', None)
+        imaginary_level_dataset.pop('instructions', None)
         return real_dataset, imaginary_level_dataset
     
     def get_instruction(self):
@@ -233,6 +209,7 @@ class BallEnv(RIMAROEnv, LlataEnv):
             test_data_path = os.path.join(DATASET_PATH, f'clevr_test_{level}.npy')
             dataset_url = test_data_url_dict[level]
             if not os.path.exists(test_data_path):
+                print(f'preparing {level} level data used for offline testing')
                 urllib.request.urlretrieve(dataset_url, test_data_path, show_progress)
                 if not os.path.exists(test_data_path):
                     raise IOError("Failed to download dataset from %s" % dataset_url)

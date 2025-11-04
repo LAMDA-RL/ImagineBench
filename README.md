@@ -14,7 +14,7 @@ Please check [the paper for ImagineBench](https://arxiv.org/abs/2505.10010v1) fo
 
 
 ## 📢 News
-- **May 15, 2025**: The paper about ImagineBench is accessible at [arXiv](https://arxiv.org/abs/2505.10010v1).
+- **May 15, 2025**: The paper for ImagineBench is accessible at [arXiv](https://arxiv.org/abs/2505.10010v1).
 - **May 14, 2025**: Add MuJoCo (HalfCheetah) environment to the benchmark, focusing on robotics locomotion.
 - **Apr 3, 2025**: Add BabyAI and LIBERO environments to the benchmark.
 - **Mar 31, 2025**: Initial release of datasets for CLEVR-Robot and Meta-World and the environments with Gymnasium wrapper.
@@ -170,7 +170,7 @@ algo_trainer.train(train_buffer=dataset, val_buffer=None, callback_fn=callback)
 
 ## Citation
 
-Please cite ImagineBench if you find this benchmark useful in your research:
+If you find this benchmark useful or relevant to your research, please cite ImagineBench as follow:
 
 ```
 @article{pang2025imaginebench,

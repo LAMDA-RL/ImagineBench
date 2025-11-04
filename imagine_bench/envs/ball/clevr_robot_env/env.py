@@ -426,10 +426,6 @@ class ClevrEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     def get_image_obs(self):
         """Returns the image observation."""
         frame = self.render(mode='rgb_array')
-        # frame = cv2.resize( frame, dsize=(self.res, self.res), interpolation=cv2.INTER_CUBIC)
-        # cv2.imwrite("/home/pangjc/zhangjj/render.png",  cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
-        # print(frame.shape)
-        # return frame/255.
         return frame
 
     def get_order_invariant_obs(self):

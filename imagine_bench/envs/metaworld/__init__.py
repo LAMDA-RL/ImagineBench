@@ -12,6 +12,7 @@ import numpy as np
 
 import metaworld.envs.mujoco.env_dict as _env_dict
 from metaworld.envs import ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE
+from imagine_bench.envs import RIMAROEnv
 
 EnvName = str
 
@@ -243,7 +244,9 @@ from gymnasium import spaces
 from metaworld.meta_utils import MetaWrapper, baseline_env_name_list, rephrase_level_env_name_list, easy_level_env_name_list, hard_level_env_name_list
 from metaworld.meta_utils import TAU_LEN, num_nl, data_dir, wrap_info, en2nl, obs_online2noisy_offline, get_noisy_entity_list, num_noisy_entity
 from envs import LEVEL_LIST, download_dataset_from_url
-class MetaWorldEnv:
+
+
+class MetaWorldEnv(RIMAROEnv):
     def __init__(self, **kwargs):
         self.dataset_url_dict = kwargs['dataset_url_dict']
 
@@ -259,7 +262,7 @@ class MetaWorldEnv:
             self.env_name_list = hard_level_env_name_list.copy()
         else:
             raise NotImplementedError
-        # 一个level对应多个env
+        # one level has multiple envs
         self.env_list = []
         for env_name in self.env_name_list:
             eval_env = ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[env_name]()
@@ -284,7 +287,6 @@ class MetaWorldEnv:
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=policy_obs.shape, dtype=np.float32)
         self.action_space = self.env_list[0].action_space
         
-        # 指令可以基于 env_name 获取, 数据集(obs, action, mask, reward)统一存为 h5
         self.path_dict = {}
         # self.init_dataset()
     
@@ -333,33 +335,10 @@ class MetaWorldEnv:
         for key, url in self.dataset_url_dict.items():
             self.path_dict[key] = download_dataset_from_url(url)
 
-    def get_dataset(self, **kwargs):
-        self.level = kwargs.get('level', 'rephrase')
-
-        assert self.level in LEVEL_LIST, f'level should be in {LEVEL_LIST}, but got {self.level}'
-
-        if 'real_h5' not in self.path_dict.keys():
-            self.path_dict['real_h5'] = download_dataset_from_url(self.dataset_url_dict['real_h5'])
-        real_dataset_path = self.path_dict['real_h5']
-        with h5py.File(real_dataset_path, 'r') as f:
-            real_dataset = {
-                'masks': f['masks'][:],
-                'observations': f['observations'][:],
-                'actions': f['actions'][:],
-                'rewards': f['rewards'][:],
-            }
-        
-        if f'imaginary_{self.level}_h5' not in self.path_dict.keys():
-            self.path_dict[f'imaginary_{self.level}_h5'] = download_dataset_from_url(self.dataset_url_dict[f'imaginary_{self.level}_h5'])
-        imaginary_level_dataset_path = self.path_dict[f'imaginary_{self.level}_h5']
-        with h5py.File(imaginary_level_dataset_path, 'r') as f:
-            imaginary_level_dataset = {
-                'masks': f['masks'][:],
-                'observations': f['observations'][:],
-                'actions': f['actions'][:],
-                'rewards': f['rewards'][:],
-            }
-        
+    def get_dataset(self, level: str = 'rephrase', data_model: str = 'llama2'):
+        real_dataset, imaginary_level_dataset = super().get_dataset(level=level, data_model=data_model)
+        real_dataset.pop('instructions', None)
+        imaginary_level_dataset.pop('instructions', None)
         return real_dataset, imaginary_level_dataset
     
     def get_instruction(self):

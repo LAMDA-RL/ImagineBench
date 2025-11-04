@@ -39,31 +39,31 @@ More environments and tasks are under active development.
 
 ### Benchmark Results
 
-Experiments with imaginary rollouts from Llama2-7B
+Imaginary rollouts from Llama2-7B (success rate %)
 
 | Algorithm | Train | Rephrase | Easy | Hard |
 |-----------|-------|----------|------|------|
-| **BC**    | **65.96 ± 15.07** | **50.74 ± 17.13** | **35.22 ± 29.60** | 12.74 ± 11.28 |
+| **BC**    | 65.96 ± 15.07 | 50.74 ± 17.13 | 35.22 ± 29.60 | 12.74 ± 11.28 |
 | **BCQ**   | 45.36 ± 19.68 | 42.08 ± 17.34 | 26.42 ± 19.87 | 11.56 ± 14.00 |
 | **CQL**   | 43.34 ± 21.41 | 37.28 ± 20.88 | 19.00 ± 10.14 | 11.74 ± 11.43 |
-| **PRDC**  | 42.57 ± 27.97 | 31.73 ± 22.90 | 31.20 ± 36.97 | **20.47 ± 11.46** |
+| **PRDC**  | 42.57 ± 27.97 | 31.73 ± 22.90 | 31.20 ± 36.97 | 20.47 ± 11.46 |
 | **TD3+BC**| 40.70 ± 30.21 | 28.03 ± 19.17 | 28.00 ± 30.37 | 16.83 ± 13.06 |
 | **COMBO** | 27.87 ± 29.44 | 22.13 ± 27.27 | 21.77 ± 24.78 | 19.93 ± 10.50 |
 | **SAC**   | 5.40 ± 2.10 | 7.85 ± 4.25 | 16.70 ± 8.30 | 1.20 ± 0.80 |
 
-Experiments with imaginary rollouts from Llama2-4B
+Imaginary rollouts from Qwen3-4B (success rate %)
 
 | Algorithm | Train | Rephrase | Easy | Hard |
 |-----------|-------|----------|------|------|
-| **BC**    | **67.78 ± 16.64** | **51.04 ± 17.98** | 25.96 ± 8.70 | 9.90 ± 12.23 |
+| **BC**    | 67.78 ± 16.64 | 51.04 ± 17.98 | 25.96 ± 8.70 | 9.90 ± 12.23 |
 | **BCQ**   | 47.56 ± 16.25 | 43.04 ± 16.03 | 29.48 ± 20.59 | 8.62 ± 10.15 |
 | **CQL**   | 36.04 ± 22.77 | 35.78 ± 22.38 | 16.32 ± 12.68 | 9.64 ± 12.20 |
 | **PRDC**  | 40.40 ± 29.81 | 27.83 ± 23.21 | 32.07 ± 40.05 | 11.40 ± 11.25 |
-| **TD3+BC**| 38.67 ± 29.98 | 30.47 ± 27.15 | **35.40 ± 44.76** | 14.27 ± 13.97 |
-| **COMBO** | 45.20 ± 29.60 | 33.00 ± 24.86 | 16.87 ± 11.54 | **18.60 ± 13.40** |
+| **TD3+BC**| 38.67 ± 29.98 | 30.47 ± 27.15 | 35.40 ± 44.76 | 14.27 ± 13.97 |
+| **COMBO** | 45.20 ± 29.60 | 33.00 ± 24.86 | 16.87 ± 11.54 | 18.60 ± 13.40 |
 | **SAC**   | 5.25 ± 0.45 | 8.40 ± 2.70 | 16.70 ± 8.30 | 1.40 ± 1.30 |
 
-_**There are still much space for performance improvement, especially on unseen tasks. We welcome contributions from the community!**_
+_**While larger model induces higher score, there are still much space for performance improvement, especially on unseen tasks. We welcome contributions from the community!**_
 
 ## Installtion
 
